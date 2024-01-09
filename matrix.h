@@ -6,6 +6,7 @@
 #include<stdexcept>
 #include<fstream>
 #include<random>
+#include<limits>
 
 namespace linear{
 // macros for deallocation
@@ -1145,18 +1146,36 @@ matrix<DATA> eye(int n) {
 /// is triangular?
 template<typename DATA>
 bool is_triangular(matrix<DATA>& M) {
-    // machine precision
-    double eps_mech = 0.000000001;
+    matrix<int> dims = M.getDims();
+    int n = dims(0, 0);
+    int m = dims(0, 1);
 
-    for(int i=1; i != M.rows(); i++) {
-        for(int j=0; j!= i; j++)
-         {
-            if(abs(M(i,j)) > eps_mech)
-                return false;
-         }
-    }
+    // machine epsilon
+    DATA epsilon = std::numeric_limits<DATA>::epsilon();
 
-    return true;
+    bool upper=true, lower=true;
+
+    //check upper triangular
+    for(int i=1; i<n; i++) {
+        for(int j=0; j<i && j<m; j++) {
+            if(std::abs(M(i,j)) > epsilon) {
+                upper = false;
+                break;
+            }
+        }
+    } // upper triangular
+
+    //check lower triangular
+    for(int i=0; i<n; i++) {
+        for(int j=i+1; j<m; j++) {
+            if( std::abs(M(i,j)) > epsilon ) {
+                lower = false;
+                break;
+            }
+        }
+    } // lower triangular
+
+    return (upper || lower);
 }
 
 } //linear namespace

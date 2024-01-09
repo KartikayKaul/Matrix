@@ -1,11 +1,10 @@
+#ifndef LINEAR_MATRIX_H
+#define LINEAR_MATRIX_H
+
 #include<iostream>
-#include<omp.h>
+#include<omp.h> // for matrix multiplication speedup.
 #include<stdexcept>
-
-// I/O with File
 #include<fstream>
-
-//extra imports for utility
 #include<random>
 
 namespace linear{
@@ -16,7 +15,8 @@ namespace linear{
 #define SAVEPATH "matrixSaves/"
 #define F_EXT ".trix"
 
-
+//stringify variable name MACRO
+#define CHANGE_ID_TO_STRING(x) (#x)
 
 template<typename DATA>
 class matrix {
@@ -1189,3 +1189,5 @@ void init2dRandArray(int *array, int size_0, int size_1) {
     for(int j=0; j<size_1; j++)
         *(array + i*size_1 + j) = distribution(generator);
 }
+
+#endif // LINEAR_MATRIX_H

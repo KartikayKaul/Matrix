@@ -1,5 +1,5 @@
-#ifndef LINEAR_MATRIX_H
-#define LINEAR_MATRIX_H
+#ifndef MATRIX_H
+#define MATRIX_H
 
 #include<iostream>
 #include<omp.h> // for matrix multiplication speedup.
@@ -7,17 +7,28 @@
 #include<fstream>
 #include<random>
 #include<limits>
+#include<type_traits>
 
 namespace linear{
 // macros for deallocation
 #define deAlloc(x) delete[] x; x = NULL;
 
-//path
+//path macros
 #define SAVEPATH "matrixSaves/"
 #define F_EXT ".trix"
 
 //stringify variable name MACRO
 #define CHANGE_ID_TO_STRING(x) (#x)
+
+
+struct range {
+  int start;
+  int end;
+  int length;
+
+  range(int x, int y) : start(x), end(y), length(end-start) {} 
+  const int size() {return end - start;}
+};
 
 template<typename DATA>
 class matrix {
@@ -34,8 +45,7 @@ class matrix {
 
         Note: 
             1.  memory is dynamically allocated for the `val` 
-                member variable.  It's lifetime is until 
-                the object instance of `matrix` defining it is alive.
+                member variable.
             2.  This class object makes use of openMP paralleisation to 
                 take advantage of parallel computing in some operations
                 such as matrix multiplication.
@@ -180,7 +190,7 @@ class matrix {
         void updateWithArray(DATA*, int, int);
 
         // display contents in a 2d grid form
-        void display();
+        void display(const std::string msg="Matrix:-");
         
         ~matrix() {
             delete[] val;
@@ -226,6 +236,7 @@ class matrix {
 
         // sliceu!
         matrix<DATA> slice(int, int, int, int);
+        matrix<DATA> operator()(range, range);
 
         // raise each element to an integer power
         matrix<DATA> operator^(int);
@@ -287,7 +298,6 @@ template<typename DATA>
 bool is_triangular(matrix<DATA>&);
 
 //  USEFUL util functions for matrix library ///
-
 
 ///// Swap functions /////
 template<typename DATA>
@@ -835,17 +845,28 @@ matrix<DATA> matrix<DATA>::operator^(int pow) {
             it would come to dealing with floats using this operation
             it might lead to cases where the data is lost.
     */
-    matrix<int> m(this->row, this->col);
+    matrix<DATA> m(this->row, this->col);
 
-    for(int i=0; i<(m.row*m.col); i++) {
-        int prod=1;
+    for(int i=0; i<m.rows(); i++) {
+        for(int j=0; j<m.cols(); j++) {
+            DATA prod=1.;
 
-        //exponent logic using loop
-        for(int j=0; j<pow; j++)
-            prod *= *(val + i);
-        
-        *(m.val + i) = prod;
+            for(int k=0; k<pow; k++)
+                prod *= *(val + i*(this->col) + j);
+
+            m(i,j) = prod;
+        }
     }
+
+    // for(int i=0; i<(m.rows()*m.cols()); i++) {
+    //     int prod=1;
+
+    //     //exponent logic using loop
+    //     for(int j=0; j<pow; j++)
+    //         prod *= *(val + i);
+        
+    //     *(m.val + i) = prod;
+    // }
 
     return m;
 }
@@ -905,6 +926,11 @@ DATA& matrix<DATA>::operator()(int r, int c)  {
 
 
 // slicing operations
+template<typename DATA>
+matrix<DATA> matrix<DATA>::operator()(range rowRange, range colRange) {
+    return this->slice(rowRange.start, rowRange.end, colRange.start, colRange.end);
+}
+
 template<typename DATA>
 matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
     /*
@@ -1038,9 +1064,10 @@ void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
 }
 
 template<typename DATA>
-void matrix<DATA>::display()  {
+void matrix<DATA>::display(const std::string msg)  {
     int i,j;
-    std::cout<<"\nMatrix:-\n";
+    std::cout<<'\n'<<msg<<'\n';
+    //std::cout<<"\nMatrix:-\n";
     for(i=0; i<this->row; i++) {
         for(j=0; j<this->col; j++)
             std::cout<<*(val + (this->col)*i + j )<<" ";
@@ -1109,6 +1136,7 @@ bool matrix<DATA>::loadMatrix(const std::string& filename) {
 ///// FILE OPERATIONS ON MATRIX END HERE ////
 
 
+// Diagonal Matrix generator
 template<typename DATA>
 matrix<DATA> diagonal(int n, DATA value) {
     matrix<DATA> m(n);
@@ -1126,7 +1154,7 @@ matrix<DATA> diagonal(int n, DATA value) {
 }
 
 
-//// identity matrix
+// Identity matrix of size n
 template<typename DATA>
 matrix<DATA> eye(int n) {
     matrix<DATA> m(n);
@@ -1143,7 +1171,7 @@ matrix<DATA> eye(int n) {
     return m;
 }
 
-/// is triangular?
+// Is it triangular?
 template<typename DATA>
 bool is_triangular(matrix<DATA>& M) {
     matrix<int> dims = M.getDims();
@@ -1192,21 +1220,36 @@ void init2dArray(DATA *array, int size_0, int size_1) {
             std::cin>>*(array + i*size_1 + j);
 }
 
-
-void init2dRandArray(int *array, int size_0, int size_1) {
+void init2dRandArray(int *array, int size_0, int size_1, int start=0, int end=9) {
     /*
      UTIL FUNCTION
         Flattened 2d array in row major form will be initialised using a
         uniform integer distribution.
     */
 
-   std::cout<<"\nInitializing our random 2d integer array";
-   std::default_random_engine generator;
-   std::uniform_int_distribution<int> distribution(0, 9);
-
-   for(int i=0; i<size_0; i++)
-    for(int j=0; j<size_1; j++)
-        *(array + i*size_1 + j) = distribution(generator);
+    //std::cout<<"\nInitializing our random 2d integer array";
+    std::default_random_engine generator;
+   
+    std::uniform_int_distribution<int> distribution(start, end);
+    for (int i = 0; i < size_0; i++)
+        for (int j = 0; j < size_1; j++)
+            *(array + i * size_1 + j) = distribution(generator);
 }
 
-#endif // LINEAR_MATRIX_H
+void init2dRandArray(float *array, int size_0, int size_1, float start=0., float end=1.) {
+    std::default_random_engine generator;
+    std::uniform_real_distribution<float> distribution(start, end);
+    for (int i = 0; i < size_0; i++)
+        for (int j = 0; j < size_1; j++)
+            *(array + i * size_1 + j) = distribution(generator);
+}
+
+void init2dRandArray(double *array, int size_0, int size_1, double start=0., double end=1.) {
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> distribution(start, end);
+    for (int i = 0; i < size_0; i++)
+        for (int j = 0; j < size_1; j++)
+            *(array + i * size_1 + j) = distribution(generator);
+}
+
+#endif // MATRIX_H

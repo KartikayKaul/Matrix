@@ -102,7 +102,12 @@ class matrix {
     void gaussianElimination(matrix<DATA>&, int, int);
 
     /// Gaussian Elimination ends here ///
+    
 
+    /// Full Pivoting private method ///
+    void FullPivoting(int, int&, int&);
+
+    /////// FULL PIVOTING ENDS //////
 
     public:
         // Getting matrix dimensions /////
@@ -277,6 +282,12 @@ class matrix {
         // solve Ax = b
         matrix<DATA> solve(const matrix<DATA>&); //experimental
 
+        // get determinant
+        double det();
+        double determinant() {
+            return this->det();
+        }
+
         /// QUERY methods
         bool isSquare() { if(this->col == this->row) return true; else return false;}
         bool isSymmetric();
@@ -287,7 +298,7 @@ class matrix {
         bool loadMatrix(const std::string&);
 };
 
-// Some function declarations useful for our matrix library
+//// USEFUL operations for matrix library ///
 template<typename DATA>
 matrix<DATA> eye(int);
 
@@ -297,7 +308,21 @@ matrix<DATA> diagonal(int, DATA);
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
 
-//  USEFUL util functions for matrix library ///
+//// Full Pivoting private method definition
+template<typename DATA>
+void matrix<DATA>::FullPivoting(int startRow, int& pivotRow, int& pivotCol) {
+    pivotRow = startRow;
+    pivotCol = startRow;
+
+    for(int i=startRow; i<this->rows(); i++) {
+        for(int j=startRow; j<this->cols(); j++) {
+            if( abs(val[i*(this->cols()) + j]) > abs(val[pivotRow * (this->cols()) + pivotCol]) ) {
+                pivotRow = i;
+                pivotCol = j;
+            } 
+        }
+    }
+}
 
 ///// Swap functions /////
 template<typename DATA>
@@ -809,6 +834,58 @@ matrix<DATA> matrix<DATA>::inv() {
     return inverse;
 }
 
+// get determinant
+template<typename DATA>
+double matrix<DATA>::det() {
+    // check that matrix is square
+    if(!isSquare()) {
+        throw std::domain_error("Determinant not defined for non-square matrices.");
+    }
+
+    // get dimensions
+    matrix<int> dims = this->getDims();
+    int n = dims(0,0); //rows
+    int m = dims(0,1); //cols
+    
+    matrix<DATA> this_copy(this->val, n, m); //copy of this
+    double detValue = 1.0;
+    double sign = 1;
+
+    for(int i=0; i<n; i++) {
+        // find pivot and perform full pivoting
+        int pivotRow, pivotCol;
+        this_copy.FullPivoting(i, pivotRow, pivotCol);
+
+        // swap rows and cols
+        if(pivotRow != i) {
+            this_copy.swapRows(i, pivotRow);
+            sign *= -1; //row swap causes sign change
+        }
+
+        if(pivotCol != i) {
+            this_copy.swapCols(i, pivotCol);
+            sign *= -1; // col swap causes sign change
+        }
+
+        double pivot = this_copy(i,i);
+        if(pivot == 0.) {
+            return 0.; // singular!
+        }       
+
+        detValue *= pivot; //multiply detValue by pivot value 
+        for(int k=i+1; k<n; k++) {
+            double factor = this_copy(k,i) / pivot;
+            
+            for(int j=i; j<n; j++) {
+                this_copy(k, j) -= factor * this_copy(i, j);
+            }
+        }
+    }
+
+    //finally implement the sign into it
+    detValue *= sign;
+    return detValue;
+}
 
 template<typename DATA>
 bool matrix<DATA>::operator==(matrix const& m) {

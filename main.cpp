@@ -12,11 +12,27 @@ int main() {
     matrix<double> A(array, N);
 
     deAlloc(array);
-    (A^2).display();
+    A.display("A:-");
 
 
     //D.saveMatrix("matrixD");
+    matrix<double> slicedMat = A(range(1,4),range(1,4));
 
+    slicedMat.display("slicedMat:-");
     //cout<<range(1,5).size();
+
+    double detA = A.det();
+    cout<<endl<<"Determinant of A = "<<detA;
+
+
+    int *intArray;
+    N=3;
+    intArray = new int[N*N];
+    init2dArray(intArray, N, N);
+    matrix<int> B(intArray, N);
+    deAlloc(intArray);
+    B.display("B:-");
+
+    cout<<"\nDeterminant of B = "<<B.determinant()<<endl;
     return 0;
 }

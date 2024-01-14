@@ -339,9 +339,9 @@ matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
 
     matrix<DATA> reshapedMatrix(newRow, newCol);
 
-    for(int i=0; i<reshapedMatrix.rows(); i++)
-        for(int j=0; j<reshapedMatrix.cols(); j++)
-            reshapedMatrix(i,j) = *(val + i*(this->row) + j);
+    for(int i=0; i< ((this->cols()) * (this->rows())); i++ ) {
+        reshapedMatrix(i/newCol, i%newCol) = val[i];
+    }
 
     return reshapedMatrix;
 }

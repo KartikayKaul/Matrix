@@ -236,6 +236,11 @@ class matrix {
                 remove old data and reallocate
                 memory for new data.
                 with caution.
+
+                This is different than the reshape function.
+                Reshape function does not delete the values 
+                of original matrix. Infact it creates a new 
+                matrix which it returns.
             */
 
            //resetting rows and cols
@@ -246,6 +251,9 @@ class matrix {
            this->delMemoryforVal();
            this->getMemoryforVal(r, c);
         }
+        
+        //reshape function
+        matrix<DATA> reshape(int newRow, int newCol);
 
         //transpose operation explicit method
         matrix<DATA> transpose();
@@ -295,9 +303,9 @@ class matrix {
         matrix<DATA> solve(const matrix<DATA>&); //experimental
 
         // get determinant
-        double det();
-        double determinant() {
-            return this->det();
+        double det(bool fullPivot=false);
+        double determinant(bool fullPivot=false) {
+            return this->det(fullPivot);
         }
 
         /// QUERY methods
@@ -320,6 +328,24 @@ matrix<DATA> diagonal(int, DATA);
 
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
+
+
+/// Reshape function
+template<typename DATA>
+matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
+    if(newRow * newCol != (this->cols())*(this->rows())){
+        throw std::invalid_argument("The product of dimensions do not match the product of dimensions of the given matrix.");
+    }
+
+    matrix<DATA> reshapedMatrix(newRow, newCol);
+
+    for(int i=0; i<reshapedMatrix.rows(); i++)
+        for(int j=0; j<reshapedMatrix.cols(); j++)
+            reshapedMatrix(i,j) = *(val + i*(this->row) + j);
+
+    return reshapedMatrix;
+}
+
 
 //// Full Pivoting private method definition
 template<typename DATA>
@@ -856,7 +882,7 @@ matrix<DATA> matrix<DATA>::inv() {
 
 // get determinant
 template<typename DATA>
-double matrix<DATA>::det() {
+double matrix<DATA>::det(bool fullPivot) {
     // check that matrix is square
     if(!isSquare()) {
         throw std::domain_error("Determinant not defined for non-square matrices.");
@@ -871,39 +897,79 @@ double matrix<DATA>::det() {
     double detValue = 1.0;
     double sign = 1;
 
-    for(int i=0; i<n; i++) {
-        // find pivot and perform full pivoting
-        int pivotRow, pivotCol;
-        this_copy.pickPivotFullPivoting(i, pivotRow, pivotCol);
+    
+    if(fullPivot) {
+        for(int i=0; i<n-1; i++) {
+            // find pivot and perform full pivoting
+            int pivotRow, pivotCol;
+            this_copy.pickPivotFullPivoting(i, pivotRow, pivotCol);
 
-        // swap rows and cols
-        if(pivotRow != i) {
-            this_copy.swapRows(i, pivotRow);
-            sign *= -1; //row swap causes sign change
-        }
-
-        if(pivotCol != i) {
-            this_copy.swapCols(i, pivotCol);
-            sign *= -1; // col swap causes sign change
-        }
-
-        double pivot = this_copy(i,i);
-        if(pivot == 0.) {
-            return 0.; // singular!
-        }       
-
-        detValue *= pivot; //multiply detValue by pivot value 
-        for(int k=i+1; k<n; k++) {
-            double factor = this_copy(k,i) / pivot;
-            
-            for(int j=i; j<n; j++) {
-                this_copy(k, j) -= factor * this_copy(i, j);
+            // swap rows and cols
+            if(pivotRow != i) {
+                this_copy.swapRows(i, pivotRow);
+                sign *= -1; //row swap causes sign change
             }
-        }
+
+            if(pivotCol != i) {
+                this_copy.swapCols(i, pivotCol);
+                sign *= -1; // col swap causes sign change
+            }
+
+            double pivot = this_copy(i,i);
+            if(abs(pivot) == 0.) {
+                return 0.; // singular!
+            }       
+
+            
+            for(int k=i+1; k<n; k++) {
+                double factor = this_copy(k,i) / pivot;
+                
+                for(int j=i; j<n; j++) {
+                    this_copy(k, j) -= factor * this_copy(i, j);
+                }
+            }
+            detValue *= pivot; //multiply detValue by pivot value 
     }
 
-    //finally implement the sign into it
-    detValue *= sign;
+    detValue *= this_copy(n-1, n-1);
+    detValue *= sign;     //finally implement the sign into it
+    } else { //partial pivoting
+
+        for(int i=0; i< n-1; i++) {
+            int pivotIdx=i;
+            double maxVal = abs(this_copy(i,i));
+            for(int k=i+1; k<n; k++) {
+                double val = abs(this_copy(k,i));
+                if(val > maxVal)
+                {
+                    pivotIdx = k;
+                    maxVal = val;
+                }
+            }
+            if(pivotIdx != i) {
+                this_copy.swapRows(i,pivotIdx);
+                sign *= -1;
+            }
+
+            // row operations that will turn it to UTM
+            double pivot = this_copy(i,i);
+            if(abs(pivot) == 0.)
+                return 0.;
+            
+            for(int k=i+1; k<n; k++) {
+                double factor = this_copy(k,i) / pivot;
+                for(int j=i; j<n; j++)
+                    this_copy(k,j) -= factor * this_copy(i,j);
+            }
+
+            detValue *= pivot;
+        }
+
+        detValue *= this_copy(n-1,n-1);
+        detValue *= sign;
+    } //partial pivoting ends here
+
+    
     return detValue;
 }
 

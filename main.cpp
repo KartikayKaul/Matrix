@@ -39,7 +39,7 @@ int main() {
     cout<<endl<<B.isComparable(C)<<endl;
     matrix<int> D = B + C;
     D.display("D = B + C:-");
-    cout<<"\nDeterminant of B = "<<B.determinant()<<endl;
+    cout<<"\nDeterminant of B = "<<B.determinant(true)<<endl;
 
     vector<vector<double>> arr = {{1, 0, 3},
                               {1, 1, 0.5},
@@ -48,5 +48,13 @@ int main() {
     matrix<double> E(arr);
     E.display("E:-");
     cout<<"\ndet(E) = "<<E.determinant();
+
+    matrix<double> newE = E.reshape(9,1);
+    newE.display("reshaped E:-");
+    matrix<int> dimsnewE = newE.getDims();
+    matrix<int> dimsE = E.getDims();
+
+    dimsE.display("dims(E):-");
+    dimsnewE.display("dims(newE):-");
     return 0;
 }

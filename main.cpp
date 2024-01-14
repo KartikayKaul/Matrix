@@ -57,5 +57,13 @@ int main() {
     dimsE.display("dims(E):-");
     dimsnewE.display("dims(newE):-");
     cout<<"\n\n┐  │┘";
+
+    matrix<double> eye3 = eye<double>(3);
+
+    eye3.display();
+
+    matrix<double> diag = diagonal<double>(3, 0.5);
+    diag.display("diagonal:-");
+    diag.inv().display("inv of diag:-");
     return 0;
 }

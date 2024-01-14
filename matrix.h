@@ -105,7 +105,7 @@ class matrix {
     
 
     /// Full Pivoting private method ///
-    void FullPivoting(int, int&, int&);
+    void pickPivotFullPivoting(int, int&, int&);
 
     /////// FULL PIVOTING ENDS //////
 
@@ -125,6 +125,8 @@ class matrix {
 
         int rows() const {return this->row;}
         int cols() const {return this->col;}
+
+
         ///// get mat dims end //////
 
         // initialize empty matrix
@@ -177,7 +179,6 @@ class matrix {
             this->row = m.row;
             this->col = m.col;
 
-            this->delMemoryforVal();
             this->getMemoryforVal(this->row, this->col);
 
             for(int i=0; i<this->row; i++)
@@ -292,6 +293,7 @@ class matrix {
         bool isSquare() { if(this->col == this->row) return true; else return false;}
         bool isSymmetric();
         DATA item();
+        bool isComparable(const matrix<DATA>&);
 
         /// File operations I/O
         bool saveMatrix(const std::string&);
@@ -310,7 +312,7 @@ bool is_triangular(matrix<DATA>&);
 
 //// Full Pivoting private method definition
 template<typename DATA>
-void matrix<DATA>::FullPivoting(int startRow, int& pivotRow, int& pivotCol) {
+void matrix<DATA>::pickPivotFullPivoting(int startRow, int& pivotRow, int& pivotCol) {
     pivotRow = startRow;
     pivotCol = startRow;
 
@@ -733,6 +735,13 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
 /////// AGGREGATE FUNCTIONS END ////////////
 
 //// QUERY METHOD DEFINITIONS ////
+template<typename DATA>
+bool matrix<DATA>::isComparable(const matrix<DATA>& m) {
+    if(this->rows() == m.rows() && this->cols() == m.cols()) {
+        return true;
+    }
+    return false;
+}
 
 template<typename DATA>
 bool matrix<DATA>::isSymmetric() {
@@ -854,7 +863,7 @@ double matrix<DATA>::det() {
     for(int i=0; i<n; i++) {
         // find pivot and perform full pivoting
         int pivotRow, pivotCol;
-        this_copy.FullPivoting(i, pivotRow, pivotCol);
+        this_copy.pickPivotFullPivoting(i, pivotRow, pivotCol);
 
         // swap rows and cols
         if(pivotRow != i) {
@@ -890,7 +899,7 @@ double matrix<DATA>::det() {
 template<typename DATA>
 bool matrix<DATA>::operator==(matrix const& m) {
     
-    if(row == m.row && col == m.col) {
+    if(this->isComparable(m)) {
         bool equal = true;
         for(int i=0; i<row*col; i++)
             {
@@ -1075,7 +1084,7 @@ matrix<DATA> matrix<DATA>::transpose() {
 
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator+(matrix const& obj) {
-    if(this->row == obj.row && this->col == obj.col) {
+    if(this->isComparable(obj)) {
         matrix<DATA> m(obj.row, obj.col);
         // addition and insertion in row major form.
         for(int i=0; i<m.row; i++)
@@ -1092,7 +1101,7 @@ matrix<DATA> matrix<DATA>::operator+(matrix const& obj) {
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator-(matrix const& obj) {
 
-        if(this->row == obj.row && this->col == obj.col) {
+        if(this->isComparable(obj)) {
             matrix<DATA> m(obj.row, obj.col);
             // subtraction and insertion in row major form.
             for(int i=0; i<m.row; i++)

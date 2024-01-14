@@ -33,6 +33,12 @@ int main() {
     deAlloc(intArray);
     B.display("B:-");
 
+    matrix<int> C(B);
+    C.display("C:-");
+
+    cout<<endl<<B.isComparable(C)<<endl;
+    matrix<int> D = B + C;
+    D.display("D = B + C:-");
     cout<<"\nDeterminant of B = "<<B.determinant()<<endl;
     return 0;
 }

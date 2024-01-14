@@ -174,6 +174,17 @@ class matrix {
         }
 
 
+        // initialize using a 2d std::vector 
+        matrix(std::vector<std::vector<DATA>> data) {
+            this->row = data.size();
+            this->col = data[0].size();
+
+            getMemoryforVal(this->row, this->col);
+            for(int i=0; i<this->row; i++)
+                for(int j=0; j<this->col; j++)
+                    *(val + i*(this->col) + j) = data[i][j];
+        }
+
         //copy constructor
         matrix(const matrix<DATA> &m) {
             this->row = m.row;

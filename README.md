@@ -10,7 +10,8 @@ Following list has some standalone functions/operations that are present in the 
 Since Matrix linear algebra library makes use of templates it is advised to always follow the function name, in the call, with `<datatype>`.
 * `eye()`: calling `eye<double>(3)` will yield a 3x3 identity matrix with `double` values
 * `is_triangular()`: returns `true` if a matrix is triangular
-* `diagonal()`: calling `diagonal<double>(3,0.5)` will yield a 3x3 diagonal matrix with  
+* `diagonal()`: calling `diagonal<double>(3,0.5)` will yield a 3x3 diagonal matrix with 0.5 as the value of each element on the principle diagonal.
+
 
 ## Updates
 - (timestamp: 1401240408) `reshape` method has been implemented with correct logic. Working fine. Will keep testing for boundary and special cases.

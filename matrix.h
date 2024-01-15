@@ -174,6 +174,17 @@ class matrix {
         }
 
 
+        // initialize a row x col matrix with `value`
+        matrix(int row, int col, DATA value) {
+            this->row = row;
+            this->col = col;
+            getMemoryforVal(row,col);
+            for(int i=0; i<row; i++)
+                for(int j=0; j<col; j++)
+                    *(val + i*col + j) = value;
+        }
+
+
         // initialize using a 2d std::vector 
         matrix(std::vector<std::vector<DATA>> data) {
             this->row = data.size();
@@ -319,7 +330,7 @@ class matrix {
         bool loadMatrix(const std::string&);
 };
 
-//// USEFUL operations for matrix library ///
+//// STANDALONE OPERATIONS DECLARATIONS ///
 template<typename DATA>
 matrix<DATA> eye(int);
 
@@ -329,8 +340,16 @@ matrix<DATA> diagonal(int, DATA);
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
 
+template<typename DATA>
+matrix<DATA> zeros(int);
 
-/// Reshape function
+template<typename DATA>
+matrix<DATA> zeros(int,int);
+
+template<typename DATA>
+matrix<DATA> zeros_like(const matrix<DATA>);
+
+/// RESHAPE METHOD DEFINITION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
     if(newRow * newCol != (this->cols())*(this->rows())){
@@ -347,7 +366,7 @@ matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
 }
 
 
-//// Full Pivoting private method definition
+/// Picking pivot using FULL PIVOTING DEFINITION
 template<typename DATA>
 void matrix<DATA>::pickPivotFullPivoting(int startRow, int& pivotRow, int& pivotCol) {
     pivotRow = startRow;
@@ -396,7 +415,7 @@ void matrix<DATA>::swapCols(int col1, int col2) {
 ///// SWAP functions end here /////
 
 
-///// GAUSSIAN ELIMINATION /////
+///// GAUSSIAN ELIMINATION private DEFINITION/////
 template<typename DATA>
 void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
 
@@ -439,7 +458,6 @@ void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
         }
     }
 }
-
 ///// GAUSSIAN ELIMINATION ENDS HERE ////
 
 //// SOLVE AX = B /////
@@ -465,8 +483,6 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
     matrix<DATA> sol = augMat.slice(0, n, n, n+1);
     return sol;
 }
-
-///////////////////////
 
 /////// AGGREGATE FUNCTIONS ///////
 
@@ -1021,16 +1037,6 @@ matrix<DATA> matrix<DATA>::operator^(int pow) {
         }
     }
 
-    // for(int i=0; i<(m.rows()*m.cols()); i++) {
-    //     int prod=1;
-
-    //     //exponent logic using loop
-    //     for(int j=0; j<pow; j++)
-    //         prod *= *(val + i);
-        
-    //     *(m.val + i) = prod;
-    // }
-
     return m;
 }
 
@@ -1367,6 +1373,27 @@ bool is_triangular(matrix<DATA>& M) {
     } // lower triangular
 
     return (upper || lower);
+}
+
+// zero matrix square
+template<typename DATA>
+matrix<DATA> zeros(int n) {
+    matrix<DATA> _0s(n,n,0);
+    return _0s;
+}
+
+// zero matrix rectangle/square
+template<typename DATA>
+matrix<DATA> zeros(int n, int m) {
+    matrix<DATA> _0s(n,m,0);
+    return _0s;
+}
+
+// zero matrix like another matrix
+template<typename DATA>
+matrix<DATA> zeros_like(const matrix<DATA> m) {
+    matrix<DATA> _0s(m.rows(), m.cols(), 0);
+    return _0s;
 }
 
 } //linear namespace

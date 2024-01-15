@@ -65,5 +65,8 @@ int main() {
     matrix<double> diag = diagonal<double>(3, 0.5);
     diag.display("diagonal:-");
     diag.inv().display("inv of diag:-");
+
+    matrix<double> weights = zeros_like(eye3);
+    weights.display("Weights:-");
     return 0;
 }

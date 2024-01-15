@@ -66,7 +66,14 @@ int main() {
     diag.display("diagonal:-");
     diag.inv().display("inv of diag:-");
 
-    matrix<double> weights = zeros_like(eye3);
+    matrix<double> weights = zeros(1);
     weights.display("Weights:-");
+    weights.getDims().display("Weights shape:-");
+
+    matrix<double> M = random(3);
+    M.display("M:-");
+
+    matrix<int> P = randomInt(3, 4, 1,2);
+    P.display("P:-");
     return 0;
 }

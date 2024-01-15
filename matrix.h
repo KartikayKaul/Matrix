@@ -340,14 +340,20 @@ matrix<DATA> diagonal(int, DATA);
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
 
-template<typename DATA>
-matrix<DATA> zeros(int);
 
-template<typename DATA>
-matrix<DATA> zeros(int,int);
+matrix<double> zeros(int);
+matrix<double> zeros(int,int);
+matrix<double> zeros_like(const matrix<double>);
 
-template<typename DATA>
-matrix<DATA> zeros_like(const matrix<DATA>);
+matrix<double> random(int, double minVal=0., double maxVal=1.);
+matrix<double> random(int, int, double minVal=0., double maxVal=1.);
+
+matrix<int> randomInt(int, int, int);
+matrix<int> randomInt(int, int, int, int);
+
+
+/// STANDALONE OPERATIONS END HERE ///
+
 
 /// RESHAPE METHOD DEFINITION
 template<typename DATA>
@@ -1376,24 +1382,85 @@ bool is_triangular(matrix<DATA>& M) {
 }
 
 // zero matrix square
-template<typename DATA>
-matrix<DATA> zeros(int n) {
-    matrix<DATA> _0s(n,n,0);
+matrix<double> zeros(int n) {
+    matrix<double> _0s(n,n,0);
     return _0s;
 }
 
 // zero matrix rectangle/square
-template<typename DATA>
-matrix<DATA> zeros(int n, int m) {
-    matrix<DATA> _0s(n,m,0);
+matrix<double> zeros(int n, int m) {
+    matrix<double> _0s(n,m,0);
     return _0s;
 }
 
 // zero matrix like another matrix
-template<typename DATA>
-matrix<DATA> zeros_like(const matrix<DATA> m) {
-    matrix<DATA> _0s(m.rows(), m.cols(), 0);
+matrix<double> zeros_like(const matrix<double> m) {
+    matrix<double> _0s(m.rows(), m.cols(), 0);
     return _0s;
+}
+
+// random square matrix
+matrix<double> random(int n, double minVal, double maxVal) {
+    matrix<double> mat(n);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::uniform_real_distribution<double> distribution(minVal, maxVal);
+
+    for(int i=0; i<n; i++){
+        for(int j=0; j<n; j++)
+            mat(i,j) = distribution(generator);
+    }
+
+    return mat;
+}
+
+// random nxm matrix
+matrix<double> random(int n, int m, double minVal, double maxVal) {
+    matrix<double> mat(n,m);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::uniform_real_distribution<double> distribution(minVal, maxVal);
+
+    for(int i=0; i<n; i++){
+        for(int j=0; j<m; j++)
+            mat(i,j) = distribution(generator);
+    }
+
+    return mat;
+}
+
+// random integer square matrix
+matrix<int> randomInt(int n, int minVal, int maxVal) {
+    matrix<int> mat(n);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::uniform_int_distribution<int> distribution(minVal, maxVal);
+
+    for(int i=0; i<n; i++) {
+        for(int j=0; j<n; j++)
+            mat(i,j) = distribution(generator);
+    }
+
+    return mat;
+}
+
+// random integer nxm matrix
+matrix<int> randomInt(int n, int m, int minVal, int maxVal) {
+    matrix<int> mat(n,m);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::uniform_int_distribution<int> distribution(minVal, maxVal);
+
+    for(int i=0; i<n; i++) {
+        for(int j=0; j<m; j++)
+            mat(i,j) = distribution(generator);
+    }
+
+    return mat;
 }
 
 } //linear namespace

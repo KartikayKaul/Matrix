@@ -7,11 +7,15 @@
 #include<fstream>
 #include<random>
 #include<limits>
-#include<type_traits>
+#include<cmath>
+#include<sstream>
+#include<iomanip>
 
 namespace linear{
 // macros for deallocation
 #define deAlloc(x) delete[] x; x = NULL;
+
+#define MATRIX_PRECISION 4
 
 //path macros
 #define SAVEPATH "matrixSaves/"
@@ -75,7 +79,6 @@ class matrix {
         this->val = new DATA[row*col];
     }
 
-    
     // validate the Param values
     bool validateParams(int x, int y, int dim) {
         // explicitly used for `slice` operation
@@ -95,27 +98,19 @@ class matrix {
         int nCols = dims(0,1);
         return r >= 0 && r < nRows && c >= 0 && c < nCols;
     }
-    //////////////////////////
-    
 
     /// Gaussian Elimination private method
     void gaussianElimination(matrix<DATA>&, int, int);
 
-    /// Gaussian Elimination ends here ///
-    
-
-    /// Full Pivoting private method ///
+    /// Full Pivoting private method
     void pickPivotFullPivoting(int, int&, int&);
 
-    /////// FULL PIVOTING ENDS //////
-
     public:
-        // Getting matrix dimensions /////
+        // Getting matrix dimensions
         matrix<int> getDims() const {
             /*
                 Returns a 1x2 integer matrix (say Dims) with row in Dims(0,0) and col in Dims(0,1) 
             */
-
            matrix<int> Dims(1,2);
            Dims(0,0) = this->row;
            Dims(0,1) = this->col;
@@ -125,9 +120,6 @@ class matrix {
 
         int rows() const {return this->row;}
         int cols() const {return this->col;}
-
-
-        ///// get mat dims end //////
 
         // initialize empty matrix
         matrix() {
@@ -173,7 +165,6 @@ class matrix {
                     *(val + i*col + j) = *(data + i*col + j);
         }
 
-
         // initialize a row x col matrix with `value`
         matrix(int row, int col, DATA value) {
             this->row = row;
@@ -183,7 +174,6 @@ class matrix {
                 for(int j=0; j<col; j++)
                     *(val + i*col + j) = value;
         }
-
 
         // initialize using a 2d std::vector 
         matrix(std::vector<std::vector<DATA>> data) {
@@ -223,23 +213,21 @@ class matrix {
         ~matrix() {
             delete[] val;
             val = NULL;
-            //std::cout<<"\nCleared heap memory for member `val`.";
         }
 
-        /////// MATRIX OPERATIONS ///////
+        /////// MATRIX OPERATIONS
         matrix<DATA> operator+(matrix const& );
         matrix<DATA> operator-(matrix const& );
-        matrix<DATA> operator&(matrix const& ); //matrix multiply
-        matrix<DATA> operator*(DATA scalar); //scalar multiplication (scalar on rhs of *)
-        bool operator==(matrix const &); // matrix equal operation
+        matrix<DATA> operator&(matrix const& ); 
+        matrix<DATA> operator*(DATA scalar);
+        matrix<DATA> &operator*=(const DATA);
     
-        //transpose operator
-        matrix<DATA> operator!(); 
-
-        //accessibility operations overload
+        // Index operator
         DATA& operator()(int, int); //access an element of the matrix
-        
-        //change dimensions //inline
+        DATA operator()(int, int) const;
+
+
+        //change dimensions
         void changeDims(int r, int c) {
             /*
                 This function will reset memory.
@@ -247,67 +235,48 @@ class matrix {
                 remove old data and reallocate
                 memory for new data.
                 with caution.
-
                 This is different than the reshape function.
                 Reshape function does not delete the values 
                 of original matrix. Infact it creates a new 
                 matrix which it returns.
             */
-
-           //resetting rows and cols
            this->row = r;
            this->col = c;
-
-
            this->delMemoryforVal();
            this->getMemoryforVal(r, c);
         }
         
-        //reshape function
+        // Reshape
         matrix<DATA> reshape(int newRow, int newCol);
 
-        //transpose operation explicit method
+        // Transpose operation
+        matrix<DATA> operator!(); 
         matrix<DATA> transpose();
         matrix<DATA> T(){ return this->transpose();};
 
-        // sliceu!
+        /// Slice operation
         matrix<DATA> slice(int, int, int, int);
         matrix<DATA> operator()(range, range);
 
-        // raise each element to an integer power
+        // Element-wise exponent operation
         matrix<DATA> operator^(int);
-        ////////////////  OPERATIONS END /////////////////
         
-        /// Swap Rows ///
+        /// Swap Operations
         void swapRows(int,int);
-        ////////////////
-
-        /// Swap Cols ///
         void swapCols(int, int);
-        ////////////////
         
-        /// Generate Augmented matrix (vertical stack or horizontal stack) ///
+        /// Generate Augmented matrix (vertical stack or horizontal stack)
         matrix<DATA> hStack(matrix const& ); // horizontal stack - hStack
         matrix<DATA> vStack(matrix const& ); // vertical  stack - vStack
         matrix<DATA> stack(matrix const& obj, bool vert=false); //generalized stack - stack
-        //////////////////////////////////////////////////////////////////////
 
-
-        /// aggregate functions ///
-        // max
+        /// aggregate functions
         matrix<DATA> max(int dim=-1);
-
-        //argmax
         matrix<DATA> argmax(int dim=-1);
-        
-        // min
         matrix<DATA> min(int dim=-1);
-
-        //argmin
         matrix<DATA> argmin(int dim=-1);
-        //// aggregate functions end ////
 
-        // matrix inverse operation
+        /// matrix inverse operation
         matrix<DATA> inv(); //experimental
 
         // solve Ax = b
@@ -323,14 +292,45 @@ class matrix {
         bool isSquare() { if(this->col == this->row) return true; else return false;}
         bool isSymmetric();
         DATA item();
-        bool isComparable(const matrix<DATA>&);
+        bool isComparable(const matrix<DATA>&) const;
 
-        /// File operations I/O
+        /// FILE OPERATIONS I/O
         bool saveMatrix(const std::string&);
         bool loadMatrix(const std::string&);
 };
 
-//// STANDALONE OPERATIONS DECLARATIONS ///
+//// NON-MEMBER OPERATIONS DECLARATIONS ///
+template<typename DATA>
+matrix<DATA> operator+(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA>
+matrix<DATA>& operator+(const matrix<DATA>&, const double);
+template<typename DATA>
+matrix<DATA>& operator+(const double, const matrix<DATA>&);
+
+template<typename DATA>
+matrix<DATA> operator-(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA>
+matrix<DATA>& operator-(const matrix<DATA>&, const double);
+template<typename DATA>
+matrix<DATA>& operator-(const double, const matrix<DATA>&);
+
+template<typename DATA>
+matrix<DATA> operator*(const matrix<DATA>&, const DATA);
+template<typename DATA>
+matrix<DATA> operator*(const DATA, const matrix<DATA>&);
+template<typename DATA>
+matrix<DATA>& operator*(const matrix<DATA>&, const matrix<DATA>&);
+
+template<typename DATA>
+bool operator==(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA>
+bool operator!=(const matrix<DATA>&, const matrix<DATA>&);
+
+template<typename DATA>
+matrix<DATA>& operator/(const matrix<DATA>&, const double);
+template<typename DATA>
+matrix<DATA>& operator/(const matrix<DATA>&, const matrix<DATA>&);
+
 template<typename DATA>
 matrix<DATA> eye(int);
 
@@ -339,7 +339,6 @@ matrix<DATA> diagonal(int, DATA);
 
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
-
 
 matrix<double> zeros(int);
 matrix<double> zeros(int,int);
@@ -350,9 +349,7 @@ matrix<double> random(int, int, double minVal=0., double maxVal=1.);
 
 matrix<int> randomInt(int, int, int);
 matrix<int> randomInt(int, int, int, int);
-
-
-/// STANDALONE OPERATIONS END HERE ///
+/// NON-MEMBER OPERATIONS END HERE ///
 
 
 /// RESHAPE METHOD DEFINITION
@@ -371,8 +368,7 @@ matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
     return reshapedMatrix;
 }
 
-
-/// Picking pivot using FULL PIVOTING DEFINITION
+/// Picking pivot using FULL PIVOTING 
 template<typename DATA>
 void matrix<DATA>::pickPivotFullPivoting(int startRow, int& pivotRow, int& pivotCol) {
     pivotRow = startRow;
@@ -388,7 +384,7 @@ void matrix<DATA>::pickPivotFullPivoting(int startRow, int& pivotRow, int& pivot
     }
 }
 
-///// Swap functions /////
+/// SWAP OPERATIONS 
 template<typename DATA>
 void matrix<DATA>::swapRows(int row1, int row2) {
     if( !isValidIndex(row1, 0) || !isValidIndex(row2, 0)) {
@@ -417,11 +413,7 @@ void matrix<DATA>::swapCols(int col1, int col2) {
     }
 }
 
-
-///// SWAP functions end here /////
-
-
-///// GAUSSIAN ELIMINATION private DEFINITION/////
+/// GAUSSIAN ELIMINATION DEFINITION
 template<typename DATA>
 void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
 
@@ -464,7 +456,6 @@ void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
         }
     }
 }
-///// GAUSSIAN ELIMINATION ENDS HERE ////
 
 //// SOLVE AX = B /////
 template<typename DATA>
@@ -472,9 +463,9 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
     int n = this->row;
     int m = this->col; // n x m dims
 
-    // if( n != m) {
-    //     throw std::length_error("Not a square matrix.");
-    // }
+    if( n != m) {
+        throw std::length_error("`solve` operation is only applicable to square matrices.");
+    }
 
     // validate the shape of b
     if( b.rows() != n || b.cols() != 1) {
@@ -491,7 +482,6 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
 }
 
 /////// AGGREGATE FUNCTIONS ///////
-
 ///// Min
 template<typename DATA>
 matrix<DATA> matrix<DATA>::min(int dim) {
@@ -790,12 +780,9 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
     }
 }
 
-
-/////// AGGREGATE FUNCTIONS END ////////////
-
-//// QUERY METHOD DEFINITIONS ////
+/// COMPARE DIMENSIONS
 template<typename DATA>
-bool matrix<DATA>::isComparable(const matrix<DATA>& m) {
+bool matrix<DATA>::isComparable(const matrix<DATA>& m) const {
     if(this->rows() == m.rows() && this->cols() == m.cols()) {
         return true;
     }
@@ -814,7 +801,6 @@ bool matrix<DATA>::isSymmetric() {
      return false;
 }
 
-
 template<typename DATA>
 DATA matrix<DATA>::item() {
     if(this->row == 1  && this->col == 1) {
@@ -823,10 +809,8 @@ DATA matrix<DATA>::item() {
         throw std::invalid_argument("To throw an item out it is supposed to be 1x1 matrix.");
     }
 }
-/////////////////////////////////
 
-
-//// STACKING OPERATIONS ////
+/// STACKING OPERATIONS
 template<typename DATA>
 matrix<DATA> matrix<DATA>::stack(matrix const& obj, bool vert) {
     if(vert)
@@ -874,35 +858,28 @@ matrix<DATA> matrix<DATA>::vStack(matrix const& obj) {
     return m;
     
 }
-//// STACKING OPERATIONS END ////
-
-
-///// MATRIX OPERATIONS DEFINITIONS START HERE ////
 
 template<typename DATA>
 matrix<DATA> matrix<DATA>::inv() {
-
     int n = this->row;
     int m = this->col;
 
     if(n != m) {
-        std::length_error("Not a square matrix.");
+        std::length_error("Inverse cannot be calculated for non-square matrices.");
     }
 
     matrix<DATA> I = eye<DATA>(n); // nxn Identity matrix
     matrix<DATA> augMat = this->hStack(I); // nx2n augmented Matrix
 
-
     // Calling gaussianElimination on augMat
     this->gaussianElimination(augMat, augMat.rows(), augMat.cols());
 
-
-    // inverse in right half of augmented matrix (augMat)
+    // inverse present in right half of augmented matrix (augMat)
     matrix<DATA> inverse = augMat.slice(0, n, n, 2*n);
     return inverse;
 }
 
-// get determinant
+// DETERMINANT
 template<typename DATA>
 double matrix<DATA>::det(bool fullPivot) {
     // check that matrix is square
@@ -991,54 +968,18 @@ double matrix<DATA>::det(bool fullPivot) {
         detValue *= sign;
     } //partial pivoting ends here
 
-    
     return detValue;
 }
 
+/// ELEMENT-WISE EXPONENT OPERATION
 template<typename DATA>
-bool matrix<DATA>::operator==(matrix const& m) {
-    
-    if(this->isComparable(m)) {
-        bool equal = true;
-        for(int i=0; i<row*col; i++)
-            {
-                if(*(val + i) != *(m.val + i))
-                    {
-                        equal = false;
-                        break;
-                    }
-            }
-        return equal;
-    } else {
-        return false;
-    }
-}
-
-
-template<typename DATA>
-matrix<DATA> matrix<DATA>::operator^(int pow) {
-    /*
-        This is not a numerically sound operation.
-        Use at your own risk.
-        This is only used for positive integer powers.
-        Will probably just use math.pow function which is
-        numerically stable. 
-
-        NOTE:
-            Just want to see how this restricted logic works for me.
-            In case of integer matrices, this is not an issue but when
-            it would come to dealing with floats using this operation
-            it might lead to cases where the data is lost.
-    */
+matrix<DATA> matrix<DATA>::operator^(int power) {
     matrix<DATA> m(this->row, this->col);
 
     for(int i=0; i<m.rows(); i++) {
         for(int j=0; j<m.cols(); j++) {
             DATA prod=1.;
-
-            for(int k=0; k<pow; k++)
-                prod *= *(val + i*(this->col) + j);
-
+            prod = pow(*(val + i*(this->col) + j), power);
             m(i,j) = prod;
         }
     }
@@ -1046,6 +987,7 @@ matrix<DATA> matrix<DATA>::operator^(int pow) {
     return m;
 }
 
+/// SCALAR MULTIPLICATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator*(DATA scalar) {
     matrix<DATA> m(this->row, this->col);
@@ -1059,7 +1001,7 @@ matrix<DATA> matrix<DATA>::operator*(DATA scalar) {
     return m;
 }
             
-
+/// MATRIX MULTIPLICATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator&(matrix const &obj) {
         if(this->col != obj.row) {
@@ -1089,6 +1031,7 @@ matrix<DATA> matrix<DATA>::operator&(matrix const &obj) {
         
 }
 
+/// INDEX OPERATION
 template<typename DATA>
 DATA& matrix<DATA>::operator()(int r, int c)  {
     
@@ -1098,9 +1041,17 @@ DATA& matrix<DATA>::operator()(int r, int c)  {
         throw std::invalid_argument("Indices exceed the dimension size.");
     }
 }
+template<typename DATA>
+DATA matrix<DATA>::operator()(int r, int c) const {
+    if(r < this->row && c < this->col) {
+        return *(val + r*this->col + c);
+    } else {
+        throw std::invalid_argument("Indices exceed the dimension size.");
+    }
 
+}
 
-// slicing operations
+/// SLICE OPERATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator()(range rowRange, range colRange) {
     return this->slice(rowRange.start, rowRange.end, colRange.start, colRange.end);
@@ -1151,7 +1102,7 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
 }
 
 
-// TRANSPOSE OPERATION
+/// TRANSPOSE OPERATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator!() {
     matrix<DATA> m(this->col, this->row);
@@ -1165,6 +1116,7 @@ matrix<DATA> matrix<DATA>::operator!() {
     return m;
 }
 
+/// TRANSPOSE OPERATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::transpose() {
     matrix m = !(*this);
@@ -1186,7 +1138,6 @@ matrix<DATA> matrix<DATA>::operator+(matrix const& obj) {
     }
 }
 
-
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator-(matrix const& obj) {
 
@@ -1203,7 +1154,6 @@ matrix<DATA> matrix<DATA>::operator-(matrix const& obj) {
         } 
 }
 
-
 template<typename DATA>
 void matrix<DATA>::insertAll(int r, int c)  {
     if(r > -1 &&  c > -1)
@@ -1216,7 +1166,6 @@ void matrix<DATA>::insertAll(int r, int c)  {
             std::cin>>*(val + (this->col)*i + j);
 }
 
-
 template<typename DATA>
 void matrix<DATA>::insertAt(DATA value, int r, int c)  {
         if( (r>-1 && r < this->row) && (c>-1 && c<this->col)) {
@@ -1225,7 +1174,6 @@ void matrix<DATA>::insertAt(DATA value, int r, int c)  {
             throw std::invalid_argument("The index values exceed the dimension size of the matrix.");
         }
 }
-
 
 template<typename DATA>
 void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
@@ -1240,20 +1188,48 @@ void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
 
 template<typename DATA>
 void matrix<DATA>::display(const std::string msg)  {
+    //experimental code
     int i,j;
     std::cout<<'\n'<<msg<<'\n';
-    //std::cout<<"\nMatrix:-\n";
-    for(i=0; i<this->row; i++) {
-        for(j=0; j<this->col; j++)
-            std::cout<<*(val + (this->col)*i + j )<<" ";
-        std::cout<<"\n";
+    int max_precision = MATRIX_PRECISION;
+    int padding = 1;
+
+    // Find the maximum number of digits in the matrix
+    int maxDigits = 1;
+    for (i = 0; i < this->row; i++) {
+        for (j = 0; j < this->col; j++) {
+            std::stringstream stream;
+            stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
+            std::string str = stream.str();
+
+            size_t pos = str.find_last_not_of('0');
+            if (pos != std::string::npos && str[pos] == '.')
+                pos--;
+
+            maxDigits = std::max(maxDigits, static_cast<int>(pos + 1));
+        }
+    }
+
+    // Set the width based on the maximum number of digits
+    int width = maxDigits + padding;
+    for (i = 0; i < this->row; i++) {
+        for (j = 0; j < this->col; j++) {
+            std::stringstream stream;
+            stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
+            std::string str = stream.str();
+
+            size_t pos = str.find_last_not_of('0');
+            if (pos != std::string::npos && str[pos] == '.')
+                pos--;
+
+            std::cout << std::setw(width) << str.substr(0, pos + 1);
+        }
+        std::cout << "\n";
     }
 }
 
-
 ///// FILE OPERATIONS ON MATRIX - I/O //////
-
-///// File operation on saving a matrix
+/// File operation on saving a matrix
 template<typename DATA>
 bool matrix<DATA>::saveMatrix(const std::string& filename) {
     std::string fullpath = SAVEPATH + filename + F_EXT;
@@ -1280,7 +1256,7 @@ bool matrix<DATA>::saveMatrix(const std::string& filename) {
     }
 }
 
-///// File operation on loading a matrix
+/// File operation on loading a matrix
 template<typename DATA>
 bool matrix<DATA>::loadMatrix(const std::string& filename) {
     std::string fullpath = SAVEPATH + filename + F_EXT;
@@ -1307,11 +1283,10 @@ bool matrix<DATA>::loadMatrix(const std::string& filename) {
         return false;
     }
 }
-
 ///// FILE OPERATIONS ON MATRIX END HERE ////
 
-
-// Diagonal Matrix generator
+/// NON-MEMBER OPERATION DEFINITIONS
+// Diagonal Matrix generator : one single value
 template<typename DATA>
 matrix<DATA> diagonal(int n, DATA value) {
     matrix<DATA> m(n);
@@ -1327,6 +1302,7 @@ matrix<DATA> diagonal(int n, DATA value) {
     
     return m;
 }
+
 
 
 // Identity matrix of size n
@@ -1461,6 +1437,51 @@ matrix<int> randomInt(int n, int m, int minVal, int maxVal) {
     }
 
     return mat;
+}
+
+template<typename DATA>
+matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    return m1 + m2;
+}
+
+
+template<typename DATA>
+matrix<DATA> &matrix<DATA>::operator*=(const DATA value) {
+    for(int i=0; i < row*col; i++)
+        *(val + i) *= value;
+    return *this;
+}
+
+template<typename DATA>
+matrix<DATA> operator*(const matrix<DATA>& m1, const DATA value) {
+    matrix<DATA> result = m1;
+    result *= value;
+    return result;
+}
+template<typename DATA>
+matrix<DATA> operator*(const DATA val, const matrix<DATA>& m1) {
+    return m1 * val;
+}
+
+template<typename DATA>
+bool operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    if(m1.isComparable(m2)) {
+        bool equal = true;
+        int n = m1.rows();
+        int m = m1.cols();
+        for(int i=0; i<n*m; i++)
+            {
+                //if(*(val + i) != *(m.val + i))
+                if(m1(i/m, i%m) != m2(i/m, i%m))
+                    {
+                        equal = false;
+                        break;
+                    }
+            }
+        return equal;
+    } else {
+        return false;
+    }
 }
 
 } //linear namespace

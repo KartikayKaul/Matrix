@@ -75,5 +75,10 @@ int main() {
 
     matrix<int> P = randomInt(3, 4, 1,2);
     P.display("P:-");
+
+    matrix<int> P3 = 3*P;
+    P3.display("3*P:-");
+
+    cout<<(P3==P);
     return 0;
 }

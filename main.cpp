@@ -28,18 +28,18 @@ int main() {
     int *intArray;
     N=3;
     intArray = new int[N*N];
-    init2dArray(intArray, N, N);
-    matrix<int> B(intArray, N);
-    deAlloc(intArray);
-    B.display("B:-");
+    // init2dArray(intArray, N, N);
+    // matrix<int> B(intArray, N);
+    // deAlloc(intArray);
+    // B.display("B:-");
 
-    matrix<int> C(B);
-    C.display("C:-");
+    // matrix<int> C(B);
+    // C.display("C:-");
 
-    cout<<endl<<B.isComparable(C)<<endl;
-    matrix<int> D = B + C;
-    D.display("D = B + C:-");
-    cout<<"\nDeterminant of B = "<<B.determinant(true)<<endl;
+    // cout<<endl<<B.isComparable(C)<<endl;
+    // matrix<int> D = B + C;
+    // D.display("D = B + C:-");
+    // cout<<"\nDeterminant of B = "<<B.determinant(true)<<endl;
 
     vector<vector<double>> arr = {{1, 0, 3},
                               {1, 1, 0.5},
@@ -73,12 +73,22 @@ int main() {
     matrix<double> M = random(3);
     M.display("M:-");
 
-    matrix<int> P = randomInt(3, 4, 1,2);
+    matrix<int> P = randomInt(3, 4, 1,2); //randomInt requires that you give the min and max integer values. PERIODT
     P.display("P:-");
 
     matrix<int> P3 = 3*P;
     P3.display("3*P:-");
 
     cout<<(P3==P);
+
+    N = 3;
+    array = new double[N*N];
+    init2dArray(array, N, N);
+    matrix<double> X(array, N);
+    init2dArray(array, N, N);
+    matrix<double> Y(array, N);
+    matrix<double> Z = X&Y;
+    Z.display();
+    cout<<Z.det()<<endl;
     return 0;
 }

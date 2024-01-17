@@ -6,16 +6,10 @@ The matrix code as of now is just a copy of the matrix data structure I made in 
 
 Matrix library is a templated library so we can have matrix elements of different types. However, it is imperative that the types be numerical types. Preferred numerical type is `double` precision floats. Many of the implemented non-member operations also operate solely on `double` precision floats such as `random`, `zeros`, etc.
 
-## Operations 
-
-### Functions
-Following list has some standalone functions/operations that are present in the library. These functions are not member functions of matrix class.
-Since Matrix linear algebra library makes use of templates it is advised to always follow the function name, in the call, with `<datatype>`.
-* `eye()`: calling `eye<double>(3)` will yield a 3x3 identity matrix with `double` values
-* `is_triangular()`: returns `true` if a matrix is triangular
-* `diagonal()`: calling `diagonal<double>(3,0.5)` will yield a 3x3 diagonal matrix with 0.5 as the value of each element on the principle diagonal.
-* ``
+## Documentation
+ You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 
 ## Updates
+- (commit update timestamp: 1601242153). I am overhauling the entire Matrix operation prototypes as well as implementations. So some of the functions might be missing their definitions. I will add them asap else. The functions that have their definitions present are working correctly.
 - (timestamp: 1401240408) `reshape` method has been implemented with correct logic. Working fine. Will keep testing for boundary and special cases.
 - Currently working on `determinant()` method. Even though this is the most useless linear algebra function but still I am working on it. I will try to create LU decomposition function and try to calculate the determinant using `det(A) = det(L) * det(U) if A = LU`.

@@ -146,9 +146,7 @@ class matrix {
         matrix(DATA *data, int n) {
             this->row =
             this->col = n;
-
             getMemoryforVal(n,n);
-
             for(int i=0; i<n; i++)
                 for(int j=0; j<n; j++)
                     *(val + i*n + j) = *(data + i*n + j);
@@ -156,7 +154,6 @@ class matrix {
 
         // initialize a rectangle matrix using a flattened 2d array input
         matrix(DATA *data, int row, int col) {
-            
             this->row = row;
             this->col = col;
             getMemoryforVal(this->row,this->col);
@@ -179,7 +176,6 @@ class matrix {
         matrix(std::vector<std::vector<DATA>> data) {
             this->row = data.size();
             this->col = data[0].size();
-
             getMemoryforVal(this->row, this->col);
             for(int i=0; i<this->row; i++)
                 for(int j=0; j<this->col; j++)
@@ -190,9 +186,7 @@ class matrix {
         matrix(const matrix<DATA> &m) {
             this->row = m.row;
             this->col = m.col;
-
             this->getMemoryforVal(this->row, this->col);
-
             for(int i=0; i<this->row; i++)
                 for(int j=0; j<this->col; j++)
                     *(val + (this->col)*i + j) = *(m.val + i*m.col + j);
@@ -216,16 +210,16 @@ class matrix {
         }
 
         /////// MATRIX OPERATIONS
-        matrix<DATA> operator+(matrix const& );
-        matrix<DATA> operator-(matrix const& );
-        matrix<DATA> operator&(matrix const& ); 
-        matrix<DATA> operator*(DATA scalar);
+        matrix<DATA> &operator+=(matrix const& );
+        matrix<DATA> &operator-=(matrix const& );
         matrix<DATA> &operator*=(const DATA);
     
         // Index operator
         DATA& operator()(int, int); //access an element of the matrix
         DATA operator()(int, int) const;
 
+        //Assignment operator
+        matrix<DATA> &operator=(const matrix<DATA>&);
 
         //change dimensions
         void changeDims(int r, int c) {
@@ -303,23 +297,23 @@ class matrix {
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA>
-matrix<DATA>& operator+(const matrix<DATA>&, const double);
+matrix<DATA> operator+(const matrix<DATA>&, const double);
 template<typename DATA>
-matrix<DATA>& operator+(const double, const matrix<DATA>&);
+matrix<DATA> operator+(const double, const matrix<DATA>&);
 
 template<typename DATA>
 matrix<DATA> operator-(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA>
-matrix<DATA>& operator-(const matrix<DATA>&, const double);
+matrix<DATA> operator-(const matrix<DATA>&, const double);
 template<typename DATA>
-matrix<DATA>& operator-(const double, const matrix<DATA>&);
+matrix<DATA> operator-(const double, const matrix<DATA>&);
 
 template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>&, const DATA);
 template<typename DATA>
 matrix<DATA> operator*(const DATA, const matrix<DATA>&);
 template<typename DATA>
-matrix<DATA>& operator*(const matrix<DATA>&, const matrix<DATA>&);
+matrix<DATA> operator*(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
 bool operator==(const matrix<DATA>&, const matrix<DATA>&);
@@ -327,9 +321,12 @@ template<typename DATA>
 bool operator!=(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
-matrix<DATA>& operator/(const matrix<DATA>&, const double);
+matrix<DATA> operator/(const matrix<DATA>&, const double);
 template<typename DATA>
-matrix<DATA>& operator/(const matrix<DATA>&, const matrix<DATA>&);
+matrix<DATA> operator/(const matrix<DATA>&, const matrix<DATA>&);
+
+template<typename DATA>
+matrix<DATA> operator&(const matrix<DATA>& );
 
 template<typename DATA>
 matrix<DATA> eye(int);
@@ -349,8 +346,6 @@ matrix<double> random(int, int, double minVal=0., double maxVal=1.);
 
 matrix<int> randomInt(int, int, int);
 matrix<int> randomInt(int, int, int, int);
-/// NON-MEMBER OPERATIONS END HERE ///
-
 
 /// RESHAPE METHOD DEFINITION
 template<typename DATA>
@@ -360,11 +355,9 @@ matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
     }
 
     matrix<DATA> reshapedMatrix(newRow, newCol);
-
     for(int i=0; i< ((this->cols()) * (this->rows())); i++ ) {
         reshapedMatrix(i/newCol, i%newCol) = val[i];
     }
-
     return reshapedMatrix;
 }
 
@@ -373,7 +366,6 @@ template<typename DATA>
 void matrix<DATA>::pickPivotFullPivoting(int startRow, int& pivotRow, int& pivotCol) {
     pivotRow = startRow;
     pivotCol = startRow;
-
     for(int i=startRow; i<this->rows(); i++) {
         for(int j=startRow; j<this->cols(); j++) {
             if( abs(val[i*(this->cols()) + j]) > abs(val[pivotRow * (this->cols()) + pivotCol]) ) {
@@ -391,21 +383,18 @@ void matrix<DATA>::swapRows(int row1, int row2) {
         throw std::invalid_argument("Row dim indices are wrong.\n");
         return;
     }
-    
     for(int j=0; j<col; j++) {
         DATA temp = *(val + row1*col + j);
         *(val + row1*col + j) = *(val + row2*col + j);
         *(val + row2*col + j) = temp;
     }
 }
-
 template<typename DATA>
 void matrix<DATA>::swapCols(int col1, int col2) {
     if( !isValidIndex(0, col1) || !isValidIndex(0, col2)) {
         throw std::invalid_argument("Column dim indices are wrong.\n");
         return;
     }
-
     for (int i = 0; i<row; ++i) {
         DATA temp = *(val + i*col + col1);
         *(val + i*col + col1) = *(val + i*col + col2);
@@ -416,7 +405,6 @@ void matrix<DATA>::swapCols(int col1, int col2) {
 /// GAUSSIAN ELIMINATION DEFINITION
 template<typename DATA>
 void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
-
     //test
     int minDim = ((n < m) ? n : m);
 
@@ -473,7 +461,6 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
     }
     
     matrix<DATA> augMat = this->hStack(b); // [A | b]
-
     gaussianElimination(augMat, augMat.rows(), augMat.cols());
 
     // get the solution from the rightmost colimns of augMat
@@ -496,7 +483,6 @@ matrix<DATA> matrix<DATA>::min(int dim) {
                 if( minElem > *(val + i)) {
                     minElem = *(val + i);
                 }
-
             m0.insertAt(minElem, 0, 0);
             return m0;
     } //dim == -1
@@ -507,16 +493,13 @@ matrix<DATA> matrix<DATA>::min(int dim) {
                 /* Returns a 1xcol matrix of max value in each jth column
                 this operation is performed along the 0th axis (row axis)
                 */
-
                 matrix<DATA> m1(1, this->col);
-
                 for(int j=0; j<this->col; j++) {
                     minElem = *(val +  j);
 
                     for(int i=1; i<this->row; i++)
                         if( minElem > *(val + i*(this->col) + j) )
                             minElem = *(val + i*(this->col) + j);
-
                     m1.insertAt(minElem, 0,j);
                 }
                 return m1;
@@ -528,7 +511,6 @@ matrix<DATA> matrix<DATA>::min(int dim) {
                     Returns a rowx1 matrix of max value in each ith row
                     this operation is performed along the 1th axis (col axis)
                 */
-
                matrix<DATA> m2(this->row, 1);
                for(int i=0; i<this->row; i++) {
                     minElem = *(val + i*(this->col));
@@ -537,7 +519,6 @@ matrix<DATA> matrix<DATA>::min(int dim) {
                         if( minElem > *(val + i*(this->col) + j) )
                             minElem = *(val + i*(this->col) +j);
                     }
-
                     m2.insertAt(minElem, i, 0);
                }
               return m2;
@@ -558,7 +539,6 @@ int minIdx_i, minIdx_j;
             Returns a 1x2 matrix with ith index at (0,0) and jth index at (0,1)
         */
             matrix<DATA> m0(1,2);
-
             // might subroutine the below repetitive code
             minIdx_i = 0;
             minIdx_j = 0;
@@ -573,7 +553,6 @@ int minIdx_i, minIdx_j;
                                 minIdx_j = j;
                             }
                     }
-
             // insert the indices at (0,0) and (0,1)
             m0.insertAt(minIdx_i, 0, 0);
             m0.insertAt(minIdx_j, 0, 1);
@@ -584,9 +563,7 @@ int minIdx_i, minIdx_j;
                 /* Returns a 1xcol matrix of index of max value in each jth column
                 this operation is performed along the 0th axis (row axis)
                 */
-
                 matrix<DATA> m1(1, this->col);
-
                 for(int j=0; j<this->col; j++) {
                     int minIdx_i = 0;
                     DATA minElem = *(val + minIdx_i*(this->col) + j);
@@ -595,7 +572,6 @@ int minIdx_i, minIdx_j;
                             minElem = *(val + i*(this->col) + j);
                             minIdx_i = i;
                         }
-
                     m1.insertAt(minIdx_i, 0,j);
                 }
                 return m1;
@@ -606,7 +582,6 @@ int minIdx_i, minIdx_j;
                     Returns a rowx1 matrix with index of max value in each ith row
                     this operation is performed along the 1th axis (col axis)
                 */
-
                matrix<DATA> m2(this->row, 1);
                for(int i=0; i<this->row; i++) {
                     int minIdx_j = 0;
@@ -618,7 +593,6 @@ int minIdx_i, minIdx_j;
                             minIdx_j = j;
                         } 
                     }
-
                     m2.insertAt(minIdx_j, i, 0);
                }
               return m2;
@@ -854,9 +828,7 @@ matrix<DATA> matrix<DATA>::vStack(matrix const& obj) {
         for(int i=0; i<obj.row; i++)
             *(m.val + (i+this->row)*m.col + j) = *(obj.val + i*obj.col + j);
     }
-
     return m;
-    
 }
 
 template<typename DATA>
@@ -896,7 +868,6 @@ double matrix<DATA>::det(bool fullPivot) {
     double detValue = 1.0;
     double sign = 1;
 
-    
     if(fullPivot) {
         for(int i=0; i<n-1; i++) {
             // find pivot and perform full pivoting
@@ -919,7 +890,6 @@ double matrix<DATA>::det(bool fullPivot) {
                 return 0.; // singular!
             }       
 
-            
             for(int k=i+1; k<n; k++) {
                 double factor = this_copy(k,i) / pivot;
                 
@@ -929,7 +899,6 @@ double matrix<DATA>::det(bool fullPivot) {
             }
             detValue *= pivot; //multiply detValue by pivot value 
     }
-
     detValue *= this_copy(n-1, n-1);
     detValue *= sign;     //finally implement the sign into it
     } else { //partial pivoting
@@ -960,14 +929,11 @@ double matrix<DATA>::det(bool fullPivot) {
                 for(int j=i; j<n; j++)
                     this_copy(k,j) -= factor * this_copy(i,j);
             }
-
             detValue *= pivot;
         }
-
         detValue *= this_copy(n-1,n-1);
         detValue *= sign;
     } //partial pivoting ends here
-
     return detValue;
 }
 
@@ -983,53 +949,8 @@ matrix<DATA> matrix<DATA>::operator^(int power) {
             m(i,j) = prod;
         }
     }
-
     return m;
-}
-
-/// SCALAR MULTIPLICATION
-template<typename DATA>
-matrix<DATA> matrix<DATA>::operator*(DATA scalar) {
-    matrix<DATA> m(this->row, this->col);
-
-    for(int i=0; i<this->row; i++)
-        for(int j=0; j<this->col; j++) {
-            int temp = *(val + (this->col)*i + j);
-            *(m.val + i*m.col + j) = scalar * temp;
-        }
-
-    return m;
-}
-            
-/// MATRIX MULTIPLICATION
-template<typename DATA>
-matrix<DATA> matrix<DATA>::operator&(matrix const &obj) {
-        if(this->col != obj.row) {
-            throw std::invalid_argument("Internal dimensions do not match.");
-            
-        }
-        else {
-            int i, j, k;
-            matrix<DATA> m(this->row, obj.col);
-            for(i=0; i<m.row; i++)
-                for(j=0; j<m.col; j++)
-                    *(m.val + i*m.col + j) = (DATA)0; //change this later 
-                    //add funct for it as DEFAULT value as addition inverse of
-                    // that data
-
-
-            //else perform multiplication in parallel using openmp
-            #pragma omp parallel for private(i,j,k) shared(this->val, obj.val, m)
-            for(i=0; i<this->row; i++)
-                for(k=0; k<obj.row; k++)
-                    for(j=0; j<obj.col; j++)
-                        *(m.val + i*m.col + j) += *(val + i*this->col + k) * *(obj.val + k*obj.col + j);
-
-            
-            return m;
-        }
-        
-}
+}   
 
 /// INDEX OPERATION
 template<typename DATA>
@@ -1056,7 +977,6 @@ template<typename DATA>
 matrix<DATA> matrix<DATA>::operator()(range rowRange, range colRange) {
     return this->slice(rowRange.start, rowRange.end, colRange.start, colRange.end);
 }
-
 template<typename DATA>
 matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
     /*
@@ -1097,10 +1017,9 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
         return m;
 
     } else {
-        throw std::invalid_argument("Bad indices reported. Check your index Params.");
+        throw std::invalid_argument("Wrong index range received. Check your index Params.");
     }
 }
-
 
 /// TRANSPOSE OPERATION
 template<typename DATA>
@@ -1123,49 +1042,18 @@ matrix<DATA> matrix<DATA>::transpose() {
     return m;
 }
 
-template<typename DATA>
-matrix<DATA> matrix<DATA>::operator+(matrix const& obj) {
-    if(this->isComparable(obj)) {
-        matrix<DATA> m(obj.row, obj.col);
-        // addition and insertion in row major form.
-        for(int i=0; i<m.row; i++)
-            for(int j=0; j<m.col; j++)
-                *(m.val + i*m.col + j) = *(obj.val + i*obj.col + j) + *(val + i*this->col + j);
 
-        return m;
-    } else {
-        throw std::invalid_argument("dimensions do not match for addition to be valid.");
-    }
-}
-
-template<typename DATA>
-matrix<DATA> matrix<DATA>::operator-(matrix const& obj) {
-
-        if(this->isComparable(obj)) {
-            matrix<DATA> m(obj.row, obj.col);
-            // subtraction and insertion in row major form.
-            for(int i=0; i<m.row; i++)
-                for(int j=0; j<m.col; j++)
-                    *(m.val + i*m.col + j) =  *(val + i*this->col + j) - *(obj.val + i*obj.col + j);
-
-            return m;
-        } else {
-            throw std::invalid_argument("Dimensions do not match for subtraction to be valid.");
-        } 
-}
-
+/// Insertion Operations
 template<typename DATA>
 void matrix<DATA>::insertAll(int r, int c)  {
     if(r > -1 &&  c > -1)
         this->changeDims(r, c);
-    
     int i,j;
     std::cout<<"\nNote: you have to insert "<<this->row*this->col<<" values. Values will be filled row-major wise in a "<<this->row<<'x'<<this->col<<" matrix.\n";
     for(i=0; i<this->row; i++)
         for(j=0; j<this->col; j++)
             std::cin>>*(val + (this->col)*i + j);
 }
-
 template<typename DATA>
 void matrix<DATA>::insertAt(DATA value, int r, int c)  {
         if( (r>-1 && r < this->row) && (c>-1 && c<this->col)) {
@@ -1174,7 +1062,6 @@ void matrix<DATA>::insertAt(DATA value, int r, int c)  {
             throw std::invalid_argument("The index values exceed the dimension size of the matrix.");
         }
 }
-
 template<typename DATA>
 void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
     if (r <0 && c < 0)
@@ -1186,6 +1073,7 @@ void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
             *(val + i*(this->col) + j) = *(array + i*(this->col) + j);
 }
 
+/// Print matrix in ostream
 template<typename DATA>
 void matrix<DATA>::display(const std::string msg)  {
     //experimental code
@@ -1228,7 +1116,6 @@ void matrix<DATA>::display(const std::string msg)  {
     }
 }
 
-///// FILE OPERATIONS ON MATRIX - I/O //////
 /// File operation on saving a matrix
 template<typename DATA>
 bool matrix<DATA>::saveMatrix(const std::string& filename) {
@@ -1283,9 +1170,7 @@ bool matrix<DATA>::loadMatrix(const std::string& filename) {
         return false;
     }
 }
-///// FILE OPERATIONS ON MATRIX END HERE ////
 
-/// NON-MEMBER OPERATION DEFINITIONS
 // Diagonal Matrix generator : one single value
 template<typename DATA>
 matrix<DATA> diagonal(int n, DATA value) {
@@ -1302,8 +1187,6 @@ matrix<DATA> diagonal(int n, DATA value) {
     
     return m;
 }
-
-
 
 // Identity matrix of size n
 template<typename DATA>
@@ -1440,12 +1323,6 @@ matrix<int> randomInt(int n, int m, int minVal, int maxVal) {
 }
 
 template<typename DATA>
-matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    return m1 + m2;
-}
-
-
-template<typename DATA>
 matrix<DATA> &matrix<DATA>::operator*=(const DATA value) {
     for(int i=0; i < row*col; i++)
         *(val + i) *= value;
@@ -1471,7 +1348,6 @@ bool operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         int m = m1.cols();
         for(int i=0; i<n*m; i++)
             {
-                //if(*(val + i) != *(m.val + i))
                 if(m1(i/m, i%m) != m2(i/m, i%m))
                     {
                         equal = false;
@@ -1482,6 +1358,59 @@ bool operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     } else {
         return false;
     }
+}
+
+template<typename DATA>
+matrix<DATA> &matrix<DATA>::operator+=(const matrix<DATA>& m1) {
+    if(!this->isComparable(m1))
+        throw std::invalid_argument("Dimensions do not match.");
+    else {
+        for(int i=0; i<this->rows()*this->cols(); i++)
+            *(val + i) += m1(i/m1.cols(), i%m1.cols());
+    }
+    return *this;
+}
+
+template<typename DATA>
+matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    return m1 + m2;
+}
+
+template<typename DATA>
+matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
+    int Size = m1.rows() * m1.cols();
+    for(int i=0; i<Size; i++)
+        m1(i/m1.cols(), i%m1.cols()) += value;
+    return m1;
+}
+
+/// MATRIX MULTIPLICATION
+template<typename DATA>
+matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> m2) {
+        if(m1.cols() != m2.rows()) {
+            throw std::invalid_argument("Internal dimensions do not match.");
+            
+        }
+        else {
+            int i, j, k;
+            matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
+            // for(i=0; i<m.rows(); i++)
+            //     for(j=0; j<m.cols(); j++)
+            //         *(m.val + i*m.cols() + j) = (DATA)0; //change this later 
+            //         //add funct for it as DEFAULT value as addition inverse of
+            //         // that data
+
+
+            //else perform multiplication in parallel using openmp
+            #pragma omp parallel for private(i,j,k) shared(this->val, obj.val, m)
+            for(i=0; i<m1.rows(); i++)
+                for(k=0; k<m2.rows(); k++)
+                    for(j=0; j<m2.cols(); j++)
+                        m(i,j) += m1(i,k) * m2(k,j);
+
+            
+            return m;
+        }       
 }
 
 } //linear namespace

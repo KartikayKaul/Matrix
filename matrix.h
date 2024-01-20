@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MATRIX_H
 #define MATRIX_H
 
@@ -123,9 +124,8 @@ class matrix {
 
         // initialize empty matrix
         matrix() {
-            // advise against using this.
             this->row = this->col = 0;
-            getMemoryforVal(this->row, this->col);
+           // getMemoryforVal(this->row, this->col);
         }
 
         // initialize a square matrix
@@ -326,7 +326,7 @@ template<typename DATA>
 matrix<DATA> operator/(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
-matrix<DATA> operator&(const matrix<DATA>& );
+matrix<DATA> operator&(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
 matrix<DATA> eye(int);
@@ -1330,6 +1330,17 @@ matrix<DATA> &matrix<DATA>::operator*=(const DATA value) {
 }
 
 template<typename DATA>
+matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
+    if(!this->isComparable(m1))
+        throw std::invalid_argument("Dimensions do not match.");
+    else {
+        for(int i=0; i<this->rows()*this->cols(); i++)
+            *(val + i) -= m1(i/m1.cols(), i%m1.cols());
+    }
+    return *this;
+}
+
+template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>& m1, const DATA value) {
     matrix<DATA> result = m1;
     result *= value;
@@ -1386,31 +1397,31 @@ matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
 
 /// MATRIX MULTIPLICATION
 template<typename DATA>
-matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> m2) {
-        if(m1.cols() != m2.rows()) {
-            throw std::invalid_argument("Internal dimensions do not match.");
-            
-        }
-        else {
-            int i, j, k;
-            matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
-            // for(i=0; i<m.rows(); i++)
-            //     for(j=0; j<m.cols(); j++)
-            //         *(m.val + i*m.cols() + j) = (DATA)0; //change this later 
-            //         //add funct for it as DEFAULT value as addition inverse of
-            //         // that data
-
-
-            //else perform multiplication in parallel using openmp
-            #pragma omp parallel for private(i,j,k) shared(this->val, obj.val, m)
-            for(i=0; i<m1.rows(); i++)
-                for(k=0; k<m2.rows(); k++)
-                    for(j=0; j<m2.cols(); j++)
-                        m(i,j) += m1(i,k) * m2(k,j);
-
-            
-            return m;
-        }       
+matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
+    if(m1.cols() != m2.rows()) {
+        throw std::invalid_argument("Internal dimensions do not match.");   
+    }
+    
+    int i, j, k;
+    matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
+    if (m1.rows() >= 100 || m1.cols() >= 100|| m2.cols() >= 100) {
+        int i, j, k;
+        matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
+        #pragma omp parallel for private(i,j,k) shared(m1, m2, m)
+        for(i=0; i<m1.rows(); i++)
+            for(k=0; k<m2.rows(); k++)
+                for(j=0; j<m2.cols(); j++)
+                    m(i,j) += m1(i,k) * m2(k,j);
+        return m;
+    }
+    else {
+        
+        for(i=0; i<m1.rows(); i++)
+            for(k=0; k<m2.rows(); k++)
+                for(j=0; j<m2.cols(); j++)
+                    m(i,j) += m1(i,k) * m2(k,j);
+        return m;
+    } 
 }
 
 } //linear namespace

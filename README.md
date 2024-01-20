@@ -6,6 +6,9 @@ The matrix code as of now is just a copy of the matrix data structure I made in 
 
 Matrix library is a templated library so we can have matrix elements of different types. However, it is imperative that the types be numerical types. Preferred numerical type is `double` precision floats. Many of the implemented non-member operations also operate solely on `double` precision floats such as `random`, `zeros`, etc.
 
+## Parallelization
+We are using OpenMP parallelization for matrix multiplication operation. If in general the matrix dimensions exceed 100 in your code then you should use `-fopenmp` flag for your compiler. Without using this flag the parallization won't work. For example say you ran your code in `main.cpp` file then you can do `g++ main.cpp -o main -fopenmp`. For sizes less than 100, parallization is disabled. This value is hard-coded as of now and cannot be changed by an environment variable or input to the `main` function or using a macros.
+
 ## Documentation
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 

@@ -38,23 +38,10 @@ struct range {
 template<typename DATA>
 class matrix {
     /*  
-        Help taken from:-
-            - math.libretexts.org
-            - Michael T Heath
-        matrix abstract DS reflects properties and behaviour of a matrix
-        
         DATA MEMEBERS:-
             val = flattened 2d array of type DATA in row major form
             row = number of rows of the matrix
             col = number of columns of the matrix
-
-        Note: 
-            1.  memory is dynamically allocated for the `val` 
-                member variable.
-            2.  This class object makes use of openMP paralleisation to 
-                take advantage of parallel computing in some operations
-                such as matrix multiplication.
-
         Guideline:
             1: It is mandatory that you make use of data types that are of numerical
                type to initialise the internal values of matrix.
@@ -77,7 +64,12 @@ class matrix {
 
     // memory allocation for internal data structure holding the values
     void getMemoryforVal(int row, int col) {
-        this->val = new DATA[row*col];
+        try {
+            this->val = new DATA[row*col];
+        }  catch(const std::bad_alloc& e) {
+            std::cerr << "Heap memory allocation failed. "<< e.what()<<std::endl;
+            std::exit(EXIT_FAILURE);
+        }
     }
 
     // validate the Param values
@@ -1350,6 +1342,16 @@ template<typename DATA>
 matrix<DATA> operator*(const DATA val, const matrix<DATA>& m1) {
     return m1 * val;
 }
+template<typename DATA>
+matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    // element-wise multiplication 
+    // NOT MATRIX MULTIPLICATION
+    matrix<DATA> product(m1.rows(), m1.cols(), (DATA)1);
+    for(int i=0; i<m1.rows()*m1.cols(); i++){
+        product(i/m1.cols(), i%m1.cols()) *= (m1(i/m1.cols(), i%m1.cols()) * m2(i/m2.cols(), i%m2.cols()));
+    }
+    return product;
+}
 
 template<typename DATA>
 bool operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
@@ -1384,15 +1386,20 @@ matrix<DATA> &matrix<DATA>::operator+=(const matrix<DATA>& m1) {
 
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    return m1 + m2;
+   matrix<DATA> m = m1;
+   m += m2;
+   return m;
 }
-
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
     int Size = m1.rows() * m1.cols();
     for(int i=0; i<Size; i++)
         m1(i/m1.cols(), i%m1.cols()) += value;
     return m1;
+}
+template<typename DATA>
+matrix<DATA> operator+(const double value, const matrix<DATA>& m2) {
+    return m2+value;
 }
 
 /// MATRIX MULTIPLICATION
@@ -1405,7 +1412,6 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     int i, j, k;
     matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
     if (m1.rows() >= 100 || m1.cols() >= 100|| m2.cols() >= 100) {
-        int i, j, k;
         matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
         #pragma omp parallel for private(i,j,k) shared(m1, m2, m)
         for(i=0; i<m1.rows(); i++)

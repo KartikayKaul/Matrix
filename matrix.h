@@ -30,7 +30,8 @@ struct range {
   int start;
   int end;
   int length;
-
+  
+  range(int x) : start(0), end(x), length(end-start) {}
   range(int x, int y) : start(x), end(y), length(end-start) {} 
   const int size() {return end - start;}
 };

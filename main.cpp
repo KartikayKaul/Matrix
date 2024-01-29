@@ -24,7 +24,8 @@ int main(int arg, char *argv[]) {
     cout<<"N:-"<<N<<endl;
     array = new double[N*N];
     init2dRandArray(array, N, N);
-    matrix<double> A(array, N);
+    matrix<double> A;
+    A.updateWithArray(array,N,N);
     init2dRandArray(array, N, N);
     matrix<double> B(array, N);
 
@@ -39,5 +40,8 @@ int main(int arg, char *argv[]) {
     cout<<"Time taken: "<<duration.count() <<" milliseconds\n";
     Aggregate anna = {0, "karry"};
     cout<<endl<<anna;
+    cout<<endl<<anna.count;
+    cout<<endl<<anna.name;
+    cout<<endl;
     return 0;
 }

@@ -339,6 +339,7 @@ matrix<double> random(int, int, double minVal=0., double maxVal=1.);
 
 matrix<int> randomInt(int, int, int);
 matrix<int> randomInt(int, int, int, int);
+/// Non-member operations declarations end ///
 
 /// RESHAPE METHOD DEFINITION
 template<typename DATA>
@@ -745,6 +746,13 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
             }
         }
     }
+}
+
+/// Assignment overload
+template<typename DATA>
+matrix<DATA>& matrix<DATA>::operator=(const matrix<DATA>& m1) {
+    this->updateWithArray(m1.val, m1.rows(), m1.cols());
+    return *this;
 }
 
 /// COMPARE DIMENSIONS
@@ -1402,6 +1410,25 @@ template<typename DATA>
 matrix<DATA> operator+(const double value, const matrix<DATA>& m2) {
     return m2+value;
 }
+
+template<typename DATA>
+matrix<DATA> operator-(const matrix<DATA>& m1, const matrix<DATA>& m2){
+    matrix<DATA> m = m1;
+    m += m2;
+    return m;
+}
+template<typename DATA>
+matrix<DATA> operator-(const matrix<DATA>& m1, const double value) {
+    int Size = m1.rows() * m1.cols();
+     for(int i=0; i<Size; i++)
+        m1(i/m1.cols(), i%m1.cols()) -= value;
+    return m1;
+}
+template<typename DATA>
+matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
+    return m2-value;
+}
+
 
 /// MATRIX MULTIPLICATION
 template<typename DATA>

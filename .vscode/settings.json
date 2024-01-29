@@ -51,6 +51,11 @@
         "string": "cpp",
         "xlocmon": "cpp",
         "xloctime": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "charconv": "cpp",
+        "forward_list": "cpp",
+        "map": "cpp",
+        "optional": "cpp",
+        "xtree": "cpp"
     }
 }

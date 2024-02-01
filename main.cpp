@@ -1,6 +1,7 @@
 #include<iostream>
 #include "matrix.h"
 #include<chrono>
+#include<complex>
 
 using namespace std;
 using namespace linear;
@@ -33,7 +34,7 @@ int main(int arg, char *argv[]) {
 
     //benchmarking matrix mul
     matrix<double> C = A&B;
-    
+    C.display("C:-");
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 
@@ -43,5 +44,21 @@ int main(int arg, char *argv[]) {
     cout<<endl<<anna.count;
     cout<<endl<<anna.name;
     cout<<endl;
+
+    
+    std::vector<std::vector<std::complex<double>>> complexMatrix;
+
+    // Initialize the complex matrix
+    complexMatrix.push_back({std::complex<double>(1.0, 2.0), std::complex<double>(3.0, 4.0)});
+    complexMatrix.push_back({std::complex<double>(5.0, 6.0), std::complex<double>(7.0, 8.0)});
+    for (const auto& row : complexMatrix) {
+        for (const auto& element : row) {
+            std::cout << element << ' ';
+        }
+        std::cout << '\n';
+    }
+    matrix<complex<double>> K(complexMatrix);
+    K.display("K:-");
+    (!K).display("transpose(K):-");
     return 0;
 }

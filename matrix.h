@@ -11,6 +11,7 @@
 #include<cmath>
 #include<sstream>
 #include<iomanip>
+#include<complex>
 
 namespace linear{
 // macros for deallocation
@@ -36,6 +37,15 @@ struct range {
   const int size() {return end - start;}
 };
 
+//test code
+//Defining type trait to check if a type is complex
+template<typename DATA>
+struct is_complex : std::false_type {};
+
+template<typename DATA>
+struct is_complex<std::complex<DATA>> : std::true_type {};
+// test code ends
+
 template<typename DATA>
 class matrix {
     /*  
@@ -54,6 +64,7 @@ class matrix {
                 For example, to perform multiplication of A and B to give C we will
                              write "matrix<int> C = (A & B);"
     */
+    static_assert(std::disjunction<std::is_arithmetic<DATA>, is_complex<DATA>>::value, "`matrix` class only supports only numerical types.");
     DATA *val;
     int row, col;
 
@@ -118,7 +129,12 @@ class matrix {
         // initialize empty matrix
         matrix() {
             this->row = this->col = 0;
-           // getMemoryforVal(this->row, this->col);
+            /*
+                following line of code is defining 0 size memory in
+                heap. Weird thing I know. By theory it should 
+                show undefined behaviour but this is an undefined matrix.
+            */
+            getMemoryforVal(this->row, this->col);
         }
 
         // initialize a square matrix
@@ -1080,6 +1096,11 @@ void matrix<DATA>::display(const std::string msg)  {
     //experimental code
     int i,j;
     std::cout<<'\n'<<msg<<'\n';
+
+    // zero size matrix display
+    if(this->row == 0 || this->col == 0)
+        std::cout<<"(empty matrix)\n";
+
     int max_precision = MATRIX_PRECISION;
     int padding = 1;
 
@@ -1457,7 +1478,6 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
         return m;
     } 
 }
-
 } //linear namespace
 
 template<typename DATA>

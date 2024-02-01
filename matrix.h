@@ -1119,8 +1119,10 @@ void matrix<DATA>::display(const std::string msg)  {
     std::cout<<'\n'<<msg<<'\n';
 
     // zero size matrix display
-    if(this->row == 0 || this->col == 0)
+    if(this->row == 0 || this->col == 0) {
         std::cout<<"(empty matrix)\n";
+        return;
+    }
 
     int max_precision = MATRIX_PRECISION;
     int padding = 1;

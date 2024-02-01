@@ -201,6 +201,27 @@ class matrix {
                     *(val + (this->col)*i + j) = *(m.val + i*m.col + j);
         }
 
+        //initializer list
+        matrix(std::initializer_list<std::initializer_list<DATA>> list) {
+            if(list.size() == 0 || list.begin()->size() == 0)
+                matrix();
+            else {
+                this->row = list.size();
+                this->col = list.begin()->size();
+                this->getMemoryforVal(this->row, this->col);
+                
+                int i=0, j=0;
+                for(const auto& ROW : list) {
+                    for(const auto& elem : ROW) {
+                        *(val + (this->col)*i + j) = elem;
+                        j++;
+                    }
+                    j=0;
+                    i++;
+                }
+            }
+        }
+
         // insert/update all the elements in row major form into the internal data structure
         void insertAll(int r=-1, int c=-1);
 
@@ -1538,7 +1559,6 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
                 randomComplexNumber.real(realPart);
                 randomComplexNumber.imag(imagPart);
                  *(array + i * size_1 + j) = randomComplexNumber;
-        }
-           
+        }          
 }
 #endif // MATRIX_H

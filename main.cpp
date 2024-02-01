@@ -64,5 +64,8 @@ int main(int arg, char *argv[]) {
     init2dRandArray(arr, N, N);
     matrix<std::complex<double>> K(arr, N, N);
     K.display("K:-");
+
+    matrix<double> Z = { {1, 2, 3}, {4, 5, 6}};
+    Z.display("Z:-");
     return 0;
 }

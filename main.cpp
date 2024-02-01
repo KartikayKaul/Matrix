@@ -57,8 +57,12 @@ int main(int arg, char *argv[]) {
         }
         std::cout << '\n';
     }
-    matrix<complex<double>> K(complexMatrix);
+
+    N=2;
+    std::complex<double> *arr;
+    arr = new std::complex<double>[N*N];
+    init2dRandArray(arr, N, N);
+    matrix<std::complex<double>> K(arr, N, N);
     K.display("K:-");
-    (!K).display("transpose(K):-");
     return 0;
 }

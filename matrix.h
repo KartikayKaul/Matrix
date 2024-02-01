@@ -1524,4 +1524,21 @@ void init2dRandArray(double *array, int size_0, int size_1, double start=0., dou
             *(array + i * size_1 + j) = distribution(generator);
 }
 
+void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double start=-1., double end=1.) {
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> realDisbn(start, end);
+    std::uniform_real_distribution<double> imagDisbn(start, end);
+
+    
+     std::complex<double> randomComplexNumber;
+    for (int i = 0; i < size_0; i++)
+        for (int j = 0; j < size_1; j++) {
+                double realPart = realDisbn(generator);
+                double imagPart = imagDisbn(generator);
+                randomComplexNumber.real(realPart);
+                randomComplexNumber.imag(imagPart);
+                 *(array + i * size_1 + j) = randomComplexNumber;
+        }
+           
+}
 #endif // MATRIX_H

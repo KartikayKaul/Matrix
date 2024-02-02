@@ -1521,40 +1521,41 @@ void init2dRandArray(int *array, int size_0, int size_1, int start=0, int end=9)
         Flattened 2d array in row major form will be initialised using a
         uniform integer distribution.
     */
-
-    //std::cout<<"\nInitializing our random 2d integer array";
-    std::default_random_engine generator;
-   
-    std::uniform_int_distribution<int> distribution(start, end);
-    for (int i = 0; i < size_0; i++)
+    for (int i = 0; i < size_0; i++) {
+        std::default_random_engine generator(std::random_device{}());
+        std::uniform_int_distribution<int> distribution(start, end);
         for (int j = 0; j < size_1; j++)
             *(array + i * size_1 + j) = distribution(generator);
+    }
 }
 
 void init2dRandArray(float *array, int size_0, int size_1, float start=0., float end=1.) {
-    std::default_random_engine generator;
-    std::uniform_real_distribution<float> distribution(start, end);
-    for (int i = 0; i < size_0; i++)
+    
+    for (int i = 0; i < size_0; i++) {
+        std::default_random_engine generator(std::random_device{}());
+        std::uniform_real_distribution<float> distribution(start, end);
         for (int j = 0; j < size_1; j++)
             *(array + i * size_1 + j) = distribution(generator);
+    }
 }
 
 void init2dRandArray(double *array, int size_0, int size_1, double start=0., double end=1.) {
-    std::default_random_engine generator;
-    std::uniform_real_distribution<double> distribution(start, end);
-    for (int i = 0; i < size_0; i++)
+    
+    for (int i = 0; i < size_0; i++) {
+        std::default_random_engine generator(std::random_device{}());
+        std::uniform_real_distribution<double> distribution(start, end);
         for (int j = 0; j < size_1; j++)
             *(array + i * size_1 + j) = distribution(generator);
+    }
 }
 
 void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double start=-1., double end=1.) {
-    std::default_random_engine generator;
-    std::uniform_real_distribution<double> realDisbn(start, end);
-    std::uniform_real_distribution<double> imagDisbn(start, end);
 
-    
-     std::complex<double> randomComplexNumber;
-    for (int i = 0; i < size_0; i++)
+    std::complex<double> randomComplexNumber;
+    for (int i = 0; i < size_0; i++) {
+        std::default_random_engine generator(std::random_device{}());
+        std::uniform_real_distribution<double> realDisbn(start, end);
+        std::uniform_real_distribution<double> imagDisbn(start, end);
         for (int j = 0; j < size_1; j++) {
                 double realPart = realDisbn(generator);
                 double imagPart = imagDisbn(generator);
@@ -1562,5 +1563,6 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
                 randomComplexNumber.imag(imagPart);
                  *(array + i * size_1 + j) = randomComplexNumber;
         }          
+    }
 }
 #endif // MATRIX_H

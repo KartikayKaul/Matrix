@@ -371,11 +371,11 @@ matrix<double> zeros(int);
 matrix<double> zeros(int,int);
 matrix<double> zeros_like(const matrix<double>);
 
-matrix<double> random(int, double minVal=0., double maxVal=1.);
-matrix<double> random(int, int, double minVal=0., double maxVal=1.);
+matrix<double> randomUniform(int, double minVal=0., double maxVal=1.);
+matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
 
-matrix<int> randomInt(int, int, int);
-matrix<int> randomInt(int, int, int, int);
+matrix<int> randomUniformInt(int, int, int);
+matrix<int> randomUniformInt(int, int, int, int);
 /// Non-member operations declarations end ///
 
 /// RESHAPE METHOD DEFINITION
@@ -438,7 +438,7 @@ template<typename DATA>
 void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
     //test
     int minDim = ((n < m) ? n : m);
-
+    
      for(int i=0; i<minDim; i++) {  //test : minDim replaced n here
         //finding the pivot
         int pivotRow = i;
@@ -735,11 +735,9 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
             return m0;
     } else {
         if(dim == 0) {
-
                 /* Returns a 1xcol matrix of index of max value in each jth column
                 this operation is performed along the 0th axis (row axis)
                 */
-
                 matrix<DATA> m1(1, this->col);
 
                 for(int j=0; j<this->col; j++) {
@@ -750,7 +748,6 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
                             maxElem = *(val + i*(this->col) + j);
                             maxIdx_i = i;
                         }
-
                     m1.insertAt(maxIdx_i, 0,j);
                 }
                 return m1;
@@ -761,7 +758,6 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
                     Returns a rowx1 matrix with index of max value in each ith row
                     this operation is performed along the 1th axis (col axis)
                 */
-
                matrix<DATA> m2(this->row, 1);
                for(int i=0; i<this->row; i++) {
                     int maxIdx_j = 0;
@@ -773,7 +769,6 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
                             maxIdx_j = j;
                         } 
                     }
-
                     m2.insertAt(maxIdx_j, i, 0);
                }
               return m2;
@@ -809,7 +804,6 @@ bool matrix<DATA>::isSymmetric() {
         if(Transpose == *this)
             return true;
      }
-
      return false;
 }
 
@@ -838,7 +832,6 @@ matrix<DATA> matrix<DATA>::hStack(matrix const& obj) {
     
     // initialize the augmented matrix
     matrix<DATA> m(this->row, this->col + obj.col);
-
     for(int i=0; i<m.row; i++) {
         for(int j=0; j<this->col; j++)
             *(m.val + i*m.col + j) = *(val + (this->col)*i + j);
@@ -846,7 +839,6 @@ matrix<DATA> matrix<DATA>::hStack(matrix const& obj) {
         for(int j=0; j<obj.col; j++)
             *(m.val + i*m.col + (j+this->col)) = *(obj.val + i*obj.col + j);
     }
-
     return m;
 }
 
@@ -857,8 +849,6 @@ matrix<DATA> matrix<DATA>::vStack(matrix const& obj) {
 
     // initialize our augmented matrix
     matrix<DATA> m(this->row + obj.row, this->col);
-
-    
     for(int j=0; j<m.col; j++) {
         for(int i=0; i<this->row; i++)
             *(m.val + i*m.col + j) = *(val + i*m.col + j);
@@ -1051,9 +1041,7 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
                 *(m.val + i*m.col + j) = *(val + (i + x_0)*(this->col) + (j + x_1));
             }
         }
-
         return m;
-
     } else {
         throw std::invalid_argument("Wrong index range received. Check your index Params.");
     }
@@ -1068,8 +1056,6 @@ matrix<DATA> matrix<DATA>::operator!() {
     for(int i=0; i<m.row; i++)
         for(int j=0; j<m.col; j++)
             m.insertAt(*(val + (this->col)*j + i),i,j);
-            //*(m.val + i*m.col + j) = *(val + (m.row)*i + j);
-
     return m;
 }
 
@@ -1079,7 +1065,6 @@ matrix<DATA> matrix<DATA>::transpose() {
     matrix m = !(*this);
     return m;
 }
-
 
 /// Insertion Operations
 template<typename DATA>
@@ -1102,7 +1087,7 @@ void matrix<DATA>::insertAt(DATA value, int r, int c)  {
 }
 template<typename DATA>
 void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
-    if (r <0 && c < 0)
+    if (r <0 || c < 0)
         throw std::invalid_argument("Bad dimension values.");
 
     this->changeDims(r, c);
@@ -1154,7 +1139,6 @@ void matrix<DATA>::display(const std::string msg)  {
             size_t pos = str.find_last_not_of('0');
             if (pos != std::string::npos && str[pos] == '.')
                 pos--;
-
             std::cout << std::setw(width) << str.substr(0, pos + 1);
         }
         std::cout << "\n";
@@ -1229,7 +1213,6 @@ matrix<DATA> diagonal(int n, DATA value) {
                 else
                     m.insertAt(0, i, j);
             }
-    
     return m;
 }
 
@@ -1237,7 +1220,6 @@ matrix<DATA> diagonal(int n, DATA value) {
 template<typename DATA>
 matrix<DATA> eye(int n) {
     matrix<DATA> m(n);
-    
     for(int i=0; i<n; i++)
         for(int j=0; j<n; j++) {
             if(i == j) {
@@ -1246,20 +1228,21 @@ matrix<DATA> eye(int n) {
                 m.insertAt(0, i, j);
             }
         }
-
     return m;
 }
 
 // Is it triangular?
 template<typename DATA>
 bool is_triangular(matrix<DATA>& M) {
+    if(!M.isSquare()) {
+        throw std::invalid_argument("The matrix is not square.");
+    }
     matrix<int> dims = M.getDims();
     int n = dims(0, 0);
     int m = dims(0, 1);
 
     // machine epsilon
     DATA epsilon = std::numeric_limits<DATA>::epsilon();
-
     bool upper=true, lower=true;
 
     //check upper triangular
@@ -1281,7 +1264,6 @@ bool is_triangular(matrix<DATA>& M) {
             }
         }
     } // lower triangular
-
     return (upper || lower);
 }
 
@@ -1304,7 +1286,7 @@ matrix<double> zeros_like(const matrix<double> m) {
 }
 
 // random square matrix
-matrix<double> random(int n, double minVal, double maxVal) {
+matrix<double> randomUniform(int n, double minVal, double maxVal) {
     matrix<double> mat(n);
 
     std::random_device dev;
@@ -1315,12 +1297,11 @@ matrix<double> random(int n, double minVal, double maxVal) {
         for(int j=0; j<n; j++)
             mat(i,j) = distribution(generator);
     }
-
     return mat;
 }
 
 // random nxm matrix
-matrix<double> random(int n, int m, double minVal, double maxVal) {
+matrix<double> randomUniform(int n, int m, double minVal, double maxVal) {
     matrix<double> mat(n,m);
 
     std::random_device dev;
@@ -1331,12 +1312,11 @@ matrix<double> random(int n, int m, double minVal, double maxVal) {
         for(int j=0; j<m; j++)
             mat(i,j) = distribution(generator);
     }
-
     return mat;
 }
 
 // random integer square matrix
-matrix<int> randomInt(int n, int minVal, int maxVal) {
+matrix<int> randomUniformInt(int n, int minVal, int maxVal) {
     matrix<int> mat(n);
 
     std::random_device dev;
@@ -1352,7 +1332,7 @@ matrix<int> randomInt(int n, int minVal, int maxVal) {
 }
 
 // random integer nxm matrix
-matrix<int> randomInt(int n, int m, int minVal, int maxVal) {
+matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
     matrix<int> mat(n,m);
 
     std::random_device dev;
@@ -1473,7 +1453,6 @@ matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
     return m2-value;
 }
 
-
 /// MATRIX MULTIPLICATION
 template<typename DATA>
 matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
@@ -1493,7 +1472,6 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
         return m;
     }
     else {
-        
         for(i=0; i<m1.rows(); i++)
             for(k=0; k<m2.rows(); k++)
                 for(j=0; j<m2.cols(); j++)

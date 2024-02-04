@@ -44,7 +44,6 @@ int main(int arg, char *argv[]) {
     cout<<endl<<anna.count;
     cout<<endl<<anna.name;
     cout<<endl;
-
     
     std::vector<std::vector<std::complex<double>>> complexMatrix;
 
@@ -74,6 +73,28 @@ int main(int arg, char *argv[]) {
 
     matrix<double> Z = { {1, 2, 3}, {4, 5, 6}};
     matrix<double> Ab = {{-1.5, 0, -3}, {-4.5, 5, -6.5}};
-    (Z+Ab).display("Z:-");
+    (Z+Ab).display("Z+Ab:-");
+
+    matrix<double> AB = randomUniform(2);
+    AB.display("AB:-");
+
+    matrix<double> AC = randomUniform(2);
+    AC.display("AC:-");
+    
+    N=3;
+    double *ara = new double[N*N];
+    init2dArray(ara, N, N);
+    matrix<double> BB(ara, N);
+    cout<<endl<<is_triangular(BB);
+    BB.display("BB:-");
+    (!BB).display("transpose(BB):-");
+    (BB.inv()).display("inv(BB):-");
+    
+    
+    matrix<int> kaka(3,1,2);
+
+    cout<<endl<<is_triangular(kaka);
+
+    matrix<std::string> names(3,1);
     return 0;
 }

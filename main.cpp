@@ -90,11 +90,11 @@ int main(int arg, char *argv[]) {
     (!BB).display("transpose(BB):-");
     (BB.inv()).display("inv(BB):-");
     
-    
-    matrix<int> kaka(3,1,2);
+    matrix<double> pepe = {{1,2.1,3}, {3,4,5},{6,7,8},{9,0.01,1}};
+    pepe.display(":-");
+    pepe.getDims().display("Ass dimensions:-");
 
-    cout<<endl<<is_triangular(kaka);
-
-    matrix<std::string> names(3,1);
+    matrix<double> nepe = pepe+3;
+    nepe.display("nepe:-");
     return 0;
 }

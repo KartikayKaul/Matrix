@@ -132,9 +132,10 @@ class matrix {
             /*
                 following line of code is defining 0 size memory in
                 heap. Weird thing I know. By theory it should 
-                show undefined behaviour but this is an undefined matrix.
+                show undefined behaviour but it hasn't shown any so far. 
+                this is an undefined, empty matrix.
             */
-            getMemoryforVal(this->row, this->col);
+            getMemoryforVal(0, 0);
         }
 
         // initialize a square matrix
@@ -147,7 +148,6 @@ class matrix {
         matrix(int row, int col) {
             this->row = row;
             this->col = col;
-            
             getMemoryforVal(this->row,this->col);
         }
 
@@ -294,7 +294,7 @@ class matrix {
         matrix<DATA> vStack(matrix const& ); // vertical  stack - vStack
         matrix<DATA> stack(matrix const& obj, bool vert=false); //generalized stack - stack
 
-        /// aggregate functions
+        /// aggregate functions (more to come)
         matrix<DATA> max(int dim=-1);
         matrix<DATA> argmax(int dim=-1);
         matrix<DATA> min(int dim=-1);
@@ -306,7 +306,7 @@ class matrix {
         // solve Ax = b
         matrix<DATA> solve(const matrix<DATA>&); //experimental
 
-        // get determinant
+        // get determinant //gaussian elimination
         double det(bool fullPivot=false);
         double determinant(bool fullPivot=false) {
             return this->det(fullPivot);
@@ -1426,9 +1426,14 @@ matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
     int Size = m1.rows() * m1.cols();
-    for(int i=0; i<Size; i++)
-        m1(i/m1.cols(), i%m1.cols()) += value;
-    return m1;
+    matrix<DATA> resMat = m1;
+    for(int i=0; i<Size; i++) {
+        DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+        temp += value;
+        resMat(i/resMat.cols(), i%resMat.cols()) = temp;
+    }
+         
+    return resMat;
 }
 template<typename DATA>
 matrix<DATA> operator+(const double value, const matrix<DATA>& m2) {

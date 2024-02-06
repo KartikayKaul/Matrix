@@ -372,7 +372,10 @@ bool is_triangular(matrix<DATA>&);
 
 matrix<double> zeros(int);
 matrix<double> zeros(int,int);
-matrix<double> zeros_like(const matrix<double>);
+template<typename DATA>
+matrix<double> zeros_like(const matrix<DATA>);
+template<typename DATA>
+matrix<DATA> matrix_like(const matrix<DATA>);
 
 matrix<double> randomUniform(int, double minVal=0., double maxVal=1.);
 matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
@@ -1282,11 +1285,18 @@ matrix<double> zeros(int n, int m) {
     return _0s;
 }
 
-// zero matrix like another matrix
-matrix<double> zeros_like(const matrix<double> m) {
+// zero matrix like another matrix]
+template<typename DATA>
+matrix<double> zeros_like(const matrix<DATA> m) {
     matrix<double> _0s(m.rows(), m.cols(), 0);
     return _0s;
 }
+template<typename DATA>
+matrix<DATA> matrix_like(const matrix<DATA> m) {
+    matrix<DATA> _0s(m.rows(), m.cols());
+    return _0s;
+}
+
 
 // random square matrix
 matrix<double> randomUniform(int n, double minVal, double maxVal) {

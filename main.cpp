@@ -92,7 +92,7 @@ int main(int arg, char *argv[]) {
     
     matrix<double> pepe = {{1,2.1,3}, {3,4,5},{6,7,8},{9,0.01,1}};
     pepe.display(":-");
-    pepe.getDims().display("Ass dimensions:-");
+    pepe.getDims().display("pepe dimensions:-");
 
     matrix<double> nepe(3,4,1.5);
     nepe /= 0.55128999993;

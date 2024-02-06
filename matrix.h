@@ -241,8 +241,11 @@ class matrix {
 
         /////// MATRIX OPERATIONS
         matrix<DATA> &operator+=(matrix const& );
+        matrix<DATA> &operator+=(const DATA);
         matrix<DATA> &operator-=(matrix const& );
+        matrix<DATA> &operator-=(const DATA);
         matrix<DATA> &operator*=(const DATA);
+        matrix<DATA> &operator/=(const DATA);
     
         // Index operator
         DATA& operator()(int, int); //access an element of the matrix
@@ -1353,6 +1356,12 @@ matrix<DATA> &matrix<DATA>::operator*=(const DATA value) {
         *(val + i) *= value;
     return *this;
 }
+template<typename DATA>
+matrix<DATA> &matrix<DATA>::operator/=(const DATA value) {
+    for(int i=0; i < row*col; i++)
+        *(val + i) /= value;
+    return *this;
+}
 
 template<typename DATA>
 matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
@@ -1362,6 +1371,12 @@ matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
         for(int i=0; i<this->rows()*this->cols(); i++)
             *(val + i) -= m1(i/m1.cols(), i%m1.cols());
     }
+    return *this;
+}
+template<typename DATA>
+matrix<DATA> &matrix<DATA>::operator-=(const DATA value) {
+    for(int i=0; i<this->rows()*this->cols(); i++)
+        *(val + i) -= value;
     return *this;
 }
 
@@ -1375,10 +1390,26 @@ template<typename DATA>
 matrix<DATA> operator*(const DATA val, const matrix<DATA>& m1) {
     return m1 * val;
 }
+
+template<typename DATA>
+matrix<DATA> operator*(const matrix<DATA>& m1, const int value) {
+    matrix<DATA> result = m1;
+    result *= (DATA)value;
+    return result;
+}
+template<typename DATA>
+matrix<DATA> operator*(const int val, const matrix<DATA>& m1) {
+    return m1 * val;
+}
+
+
 template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     // element-wise multiplication 
     // NOT MATRIX MULTIPLICATION
+    if(!(m1->isComparable(m2))) {
+        throw std::invalid_argument("Corresponding dimensions do not match for element-wise multiplication.");
+    }
     matrix<DATA> product(m1.rows(), m1.cols(), (DATA)1);
     for(int i=0; i<m1.rows()*m1.cols(); i++){
         product(i/m1.cols(), i%m1.cols()) *= (m1(i/m1.cols(), i%m1.cols()) * m2(i/m2.cols(), i%m2.cols()));
@@ -1416,9 +1447,19 @@ matrix<DATA> &matrix<DATA>::operator+=(const matrix<DATA>& m1) {
     }
     return *this;
 }
+template<typename DATA>
+matrix<DATA> &matrix<DATA>::operator+=(const DATA value) {
+    for(int i=0; i<this->rows()*this->cols(); i++) {
+            *(val + i) += value;
+    }
+    return *this;
+}
 
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+   if(!(m1.isComparable(m2))) {
+        throw std::invalid_argument("corresponding dimensions do not match for addition.");
+   }
    matrix<DATA> m = m1;
    m += m2;
    return m;
@@ -1432,7 +1473,6 @@ matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
         temp += value;
         resMat(i/resMat.cols(), i%resMat.cols()) = temp;
     }
-         
     return resMat;
 }
 template<typename DATA>
@@ -1442,16 +1482,20 @@ matrix<DATA> operator+(const double value, const matrix<DATA>& m2) {
 
 template<typename DATA>
 matrix<DATA> operator-(const matrix<DATA>& m1, const matrix<DATA>& m2){
+    if(!(m1.isComparable(m2))) {
+        throw std::invalid_argument("corresponding dimensions do not match for subtraction.");
+    }
     matrix<DATA> m = m1;
     m += m2;
     return m;
 }
 template<typename DATA>
 matrix<DATA> operator-(const matrix<DATA>& m1, const double value) {
-    int Size = m1.rows() * m1.cols();
+    matrix<DATA> res = m1;
+    int Size = res.rows() * res.cols();
      for(int i=0; i<Size; i++)
-        m1(i/m1.cols(), i%m1.cols()) -= value;
-    return m1;
+        res(i/res.cols(), i%res.cols()) -= value;
+    return res;
 }
 template<typename DATA>
 matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {

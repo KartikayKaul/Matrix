@@ -82,19 +82,20 @@ int main(int arg, char *argv[]) {
     AC.display("AC:-");
     
     N=3;
-    double *ara = new double[N*N];
-    init2dArray(ara, N, N);
-    matrix<double> BB(ara, N);
-    cout<<endl<<is_triangular(BB);
-    BB.display("BB:-");
-    (!BB).display("transpose(BB):-");
-    (BB.inv()).display("inv(BB):-");
+    //double *ara = new double[N*N];
+    // init2dArray(ara, N, N);
+    // matrix<double> BB(ara, N);
+    // cout<<endl<<is_triangular(BB);
+    // BB.display("BB:-");
+    // (!BB).display("transpose(BB):-");
+    // (BB.inv()).display("inv(BB):-");
     
     matrix<double> pepe = {{1,2.1,3}, {3,4,5},{6,7,8},{9,0.01,1}};
     pepe.display(":-");
     pepe.getDims().display("Ass dimensions:-");
 
-    matrix<double> nepe = pepe+3;
+    matrix<double> nepe(3,4,1.5);
+    nepe /= 0.55128999993;
     nepe.display("nepe:-");
     return 0;
 }

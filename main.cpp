@@ -7,17 +7,6 @@ using namespace std;
 using namespace linear;
 using namespace std::chrono;
 
-struct Aggregate {
-    private:
-        void countpp() {count++;}
-        friend std::ostream& operator<<(std::ostream& os, const Aggregate& obj) {
-            return os << "[Aggregate] -> {" << obj.count << "," << obj.name << "}\n";
-        }
-    public:
-        int count;
-        std::string name;
-};
-
 int main(int arg, char *argv[]) {
     double *array;
     int N = std::atoi(argv[1]);
@@ -90,15 +79,20 @@ int main(int arg, char *argv[]) {
     pepe.getDims().display("pepe dimensions:-");
 
     //only real part will contribute in below matrix `nepe`
-    matrix<double> nepe = pepe/(std::complex<double>(3,2)); 
+    matrix<double> nepe = pepe/(std::complex<double>(3.5,2)); 
     /* NOTE:-
     matrix<double> nepe = pepe/(std::complex<int>(3,2))
 
     above copy expression will generate error, since, `pepe` is a double matrix
-    and complex type has integer elements. So the static_casting will not work.
+    and complex type has integer elements. So the static_casting alone will not work.
     There is no workaround for this as of now in the library. 
     Ensure internal elements' data types of a non-primitive numerical 
     data types match with those of the matrix's elements' data type.
+
+    One way to think of solving is to provide a separate definition for
+    conversion of internal type of complex number
+    by explicitly doing the conversion of the internal element. Will try to imple-
+    -ment this asap.
 
     And if it is a custom numerical data type (especially if it is templated), that
     all operator overloads are well defined and all cases for different internal

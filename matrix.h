@@ -12,6 +12,7 @@
 #include<sstream>
 #include<iomanip>
 #include<complex>
+#include<type_traits>
 
 namespace linear{
 // macros for deallocation
@@ -253,7 +254,7 @@ class matrix {
 
         //Assignment operator
         matrix<DATA> &operator=(const matrix<DATA>&);
-
+        
         //change dimensions
         void changeDims(int r, int c) {
             /*
@@ -341,10 +342,10 @@ matrix<DATA> operator-(const matrix<DATA>&, const double);
 template<typename DATA>
 matrix<DATA> operator-(const double, const matrix<DATA>&);
 
-template<typename DATA>
-matrix<DATA> operator*(const matrix<DATA>&, const DATA);
-template<typename DATA>
-matrix<DATA> operator*(const DATA, const matrix<DATA>&);
+template<typename DATA, typename ATAD>
+matrix<DATA> operator*(const matrix<DATA>&, const ATAD);
+template<typename DATA, typename ATAD>
+matrix<DATA> operator*(const ATAD, const matrix<DATA>&);
 template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>&, const matrix<DATA>&);
 
@@ -353,10 +354,10 @@ bool operator==(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA>
 bool operator!=(const matrix<DATA>&, const matrix<DATA>&);
 
-template<typename DATA>
-matrix<DATA> operator/(const matrix<DATA>&, const double);
-template<typename DATA>
-matrix<DATA> operator/(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA, typename ATAD>
+matrix<DATA> operator/(const matrix<DATA>&, const ATAD);
+template<typename DATA, typename ATAD>
+matrix<DATA> operator/(const ATAD,const matrix<DATA>&);
 
 template<typename DATA>
 matrix<DATA> operator&(const matrix<DATA>&, const matrix<DATA>&);
@@ -1009,6 +1010,15 @@ DATA matrix<DATA>::operator()(int r, int c) const {
 /// SLICE OPERATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator()(range rowRange, range colRange) {
+    /*
+        sister function of `slice` operation.
+        It makes use of `range` type to accomplish slicing.
+        EXAMPLE USAGE:-
+            matrix<double> A(5,5,2.5);
+            matrix<double> smolA = A(range(3), range(4)); //3x4 matrix
+            matrix<double slicedA = A(range(2,3), range(2,5)); //1x3 matrix
+        `end` index in range is excluded.
+    */
     return this->slice(rowRange.start, rowRange.end, colRange.start, colRange.end);
 }
 template<typename DATA>
@@ -1024,7 +1034,7 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
            a (y_0 - x_0) x (y_1 - x_1) submatrix from the given input matrix
         
         USAGE
-            Suppose you have a 5x4  matrix of some random integervalues
+            Suppose you have a 5x4  matrix of some random integer values
             You invoke `matrix<int> subMatrix = A.slice(1,4, 1,2)`. This will
             return a 3x1 submatrix of the original matrix.
 
@@ -1390,28 +1400,35 @@ matrix<DATA> &matrix<DATA>::operator-=(const DATA value) {
     return *this;
 }
 
-template<typename DATA>
-matrix<DATA> operator*(const matrix<DATA>& m1, const DATA value) {
+template<typename DATA, typename ATAD>
+matrix<DATA> operator/(const matrix<DATA>& m1, const ATAD value) {
     matrix<DATA> result = m1;
-    result *= value;
+    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+        result /= static_cast<DATA>(std::real(value));
+    } else {
+        result /= static_cast<DATA>(value);
+    }
     return result;
 }
-template<typename DATA>
-matrix<DATA> operator*(const DATA val, const matrix<DATA>& m1) {
+template<typename DATA, typename ATAD>
+matrix<DATA> operator/(const ATAD val, const matrix<DATA>& m1) {
     return m1 * val;
 }
 
-template<typename DATA>
-matrix<DATA> operator*(const matrix<DATA>& m1, const int value) {
+template<typename DATA, typename ATAD>
+matrix<DATA> operator*(const matrix<DATA>& m1, const ATAD value) {
     matrix<DATA> result = m1;
-    result *= (DATA)value;
+    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+        result *= static_cast<DATA>(std::real(value));
+    } else {
+        result *= static_cast<DATA>(value);
+    }
     return result;
 }
-template<typename DATA>
-matrix<DATA> operator*(const int val, const matrix<DATA>& m1) {
+template<typename DATA, typename ATAD>
+matrix<DATA> operator*(const ATAD val, const matrix<DATA>& m1) {
     return m1 * val;
 }
-
 
 template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
@@ -1429,22 +1446,7 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 
 template<typename DATA>
 bool operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    if(m1.isComparable(m2)) {
-        bool equal = true;
-        int n = m1.rows();
-        int m = m1.cols();
-        for(int i=0; i<n*m; i++)
-            {
-                if(m1(i/m, i%m) != m2(i/m, i%m))
-                    {
-                        equal = false;
-                        break;
-                    }
-            }
-        return equal;
-    } else {
-        return false;
-    }
+    return m1.isComparable(m2);
 }
 
 template<typename DATA>

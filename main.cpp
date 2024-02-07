@@ -39,14 +39,8 @@ int main(int arg, char *argv[]) {
     auto duration = duration_cast<milliseconds>(end-start);
 
     cout<<"Time taken: "<<duration.count() <<" milliseconds\n";
-    Aggregate anna = {0, "karry"};
-    cout<<endl<<anna;
-    cout<<endl<<anna.count;
-    cout<<endl<<anna.name;
-    cout<<endl;
     
     std::vector<std::vector<std::complex<double>>> complexMatrix;
-
     // Initialize the complex matrix
     complexMatrix.push_back({std::complex<double>(1.0, 2.0), std::complex<double>(3.0, 4.0)});
     complexMatrix.push_back({std::complex<double>(5.0, 6.0), std::complex<double>(7.0, 8.0)});
@@ -90,12 +84,28 @@ int main(int arg, char *argv[]) {
     // (!BB).display("transpose(BB):-");
     // (BB.inv()).display("inv(BB):-");
     
-    matrix<double> pepe = {{1,2.1,3}, {3,4,5},{6,7,8},{9,0.01,1}};
-    pepe.display(":-");
+    // A 4x3 double matrix 
+    matrix<double> pepe = {{1,2,3.01}, {3.2,4,5},{6.5,7,8},{9,0,1}};
+    pepe.display("pepe:-");
     pepe.getDims().display("pepe dimensions:-");
 
-    matrix<double> nepe(3,4,1.5);
-    nepe /= 0.55128999993;
+    //only real part will contribute in below matrix `nepe`
+    matrix<double> nepe = pepe/(std::complex<double>(3,2)); 
+    /* NOTE:-
+    matrix<double> nepe = pepe/(std::complex<int>(3,2))
+
+    above copy expression will generate error, since, `pepe` is a double matrix
+    and complex type has integer elements. So the static_casting will not work.
+    There is no workaround for this as of now in the library. 
+    Ensure internal elements' data types of a non-primitive numerical 
+    data types match with those of the matrix's elements' data type.
+
+    And if it is a custom numerical data type (especially if it is templated), that
+    all operator overloads are well defined and all cases for different internal
+    data types are considered.
+    */ 
+    nepe.display("nepe:-");
+    nepe = pepe(range(1,4),range(2,3));
     nepe.display("nepe:-");
     return 0;
 }

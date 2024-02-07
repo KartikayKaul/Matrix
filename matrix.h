@@ -3,7 +3,8 @@
 #define MATRIX_H
 
 #include<iostream>
-#include<omp.h> // for matrix multiplication speedup.
+#include<omp.h> // for matrix multiplication speedup.'
+#include<openacc.h>
 #include<stdexcept>
 #include<fstream>
 #include<random>
@@ -1524,12 +1525,24 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     int i, j, k;
     matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
     if (m1.rows() >= 100 || m1.cols() >= 100|| m2.cols() >= 100) {
-        matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
+        #ifdef _OPENACC
+        //std::cout<<"Using OpenACC for parallelization\n";
+        #pragma acc parallel loop gang private(i, j, k) present(m1, m2, m)
+        #else
+        //std::cout<<"Using OpenMP for parallelization\n";
         #pragma omp parallel for private(i,j,k) shared(m1, m2, m)
-        for(i=0; i<m1.rows(); i++)
-            for(k=0; k<m2.rows(); k++)
+        #endif
+        for(i=0; i<m1.rows(); i++) {
+            for(k=0; k<m2.rows(); k++) {
+                #ifdef _OPENACC
+                #pragma acc loop vector
+                #else
+                #pragma omp parallel for
+                #endif
                 for(j=0; j<m2.cols(); j++)
                     m(i,j) += m1(i,k) * m2(k,j);
+            }
+        } //i-loop
         return m;
     }
     else {

@@ -9,12 +9,29 @@ Matrix library is a templated library so we can have matrix elements of differen
 Be careful when dealing with `std::complex` matrices. Although I have tested the library with complex matrices and it works fine in many cases but when it comes to performing operations where type conversion might occur, due to there being explicit conversion or implicit, some errors may arise. Moreover, I am actively taking into consideration adding safety measures to handle such cases and accomodate operations for complex numerical operations with the matrices.
 
 ## Parallelization
-We are using OpenMP parallelization for matrix multiplication operation. If in general the matrix dimensions exceed 100 in your code then you should use `-fopenmp` flag for your compiler. Without using this flag the parallization won't work. For example say you ran your code in `main.cpp` file then you can do `g++ main.cpp -o main -fopenmp`. For sizes less than 100, parallization is disabled. This value is hard-coded as of now and cannot be changed by an environment variable or input to the `main` function or using a macros.
+
+Matrix multiplication operation using OpenACC or OpenMP parallelization based on appropriate compiler flag used. If you do not use the flag, the compiler will by default ignore the parallelization directives added in the code and run sequentially.
+
+Compiling using OpenMP:-
+```bash
+g++ main.cpp -o main -fopenmp
+```
+
+Compiling using OpenACC:-
+```bash
+g++ main.cpp -o main -fopenacc
+```
+For sizes less than 100, parallization is disabled. This value is hard-coded as of now and cannot be changed by an environment variable or input to the `main` function or using a macros.
+
+I have benchmarked the matrix multiplication on matrix size of 1000x1000 for both OpenACC and OpenMP and OpenMP performs much better. I recommend using the `-fopenmp` flag to make use of parallelization but maybe this varies based on the system. So you can try benchmarking by running the [main.cpp](./main.cpp) file in your system.
+In my case, OpenMP produces result in ~1000 ms and OpenACC produces same result in ~8500 ms. Without parallelization it takes ~9000 ms. 
 
 ## Documentation
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 
 ## Updates
+- (commit update timestamp: 9702240400). I have added parallelization using OpenACC
+   and OpenMP together. 
 - (commit update zeitstamp: 0602241723). I have reduced the logic of operator== overload from 'checking equality of each element' to logic of `isComparable` method. This is much practical logic than the previous one I had implemented.
 - (commit update timestampt: 0402241621). I have done a lot of mistakes in non-member matrix operations such as not taking into consideration the constant parameters. This is raising very silly little errors. I will correct them asap. The operations are not working because I am trying to modify constant matrices.
 - (commit update timestamp: 1601242153). I am overhauling the entire Matrix operation prototypes as well as implementations. So some of the functions might be missing their definitions. I will add them asap else. The functions that have their definitions present are working correctly.

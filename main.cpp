@@ -22,8 +22,9 @@ int main(int arg, char *argv[]) {
     auto start = high_resolution_clock::now();
 
     //benchmarking matrix mul
+    cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING\n\n";
     matrix<double> C = A&B;
-    C.display("C:-");
+    //C.display("C:-");
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 

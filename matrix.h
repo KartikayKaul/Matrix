@@ -1537,7 +1537,7 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
                 #ifdef _OPENACC
                 #pragma acc loop vector
                 #else
-                #pragma omp parallel for
+                #pragma omp simd
                 #endif
                 for(j=0; j<m2.cols(); j++)
                     m(i,j) += m1(i,k) * m2(k,j);
@@ -1602,7 +1602,6 @@ void init2dRandArray(double *array, int size_0, int size_1, double start=0., dou
 }
 
 void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double start=-1., double end=1.) {
-
     std::complex<double> randomComplexNumber;
     for (int i = 0; i < size_0; i++) {
         std::default_random_engine generator(std::random_device{}());

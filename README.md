@@ -30,6 +30,7 @@ In my case, OpenMP produces result in ~1000 ms and OpenACC produces same result 
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 
 ## Updates
+- (commit update timestamp: 0902240138). You can try working with `complex` matrices and experiment. If any errors arise, please raise them in issues section. I have tried to make sure that `std::complex` matrices are handled properly handled while type conversion arises.
 - (commit update timestamp: 0902240117).
    - Added `matmul_simd` that uses AVX instructions. Performed benchmarking (sortof) in [main.cpp](./main.cpp) file.
    - Increased implementation in operator= overload to handle type conversions. NOTE: Currently handling type-conversions with `std:complex` type will seem to generate errors that  I am working on. 

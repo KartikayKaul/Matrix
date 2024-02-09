@@ -129,6 +129,25 @@ class matrix {
         int rows() const {return this->row;}
         int cols() const {return this->col;}
 
+        //change dimensions
+        void changeDims(int r, int c) {
+            /*
+                This function will reset memory.
+                It will reshape the matrix and
+                remove old data and reallocate
+                memory for new data.
+                with caution.
+                This is different than the reshape function.
+                Reshape function does not delete the values 
+                of original matrix. Infact it creates a new 
+                matrix which it returns.
+            */
+           this->row = r;
+           this->col = c;
+           this->delMemoryforVal();
+           this->getMemoryforVal(r, c);
+        }
+
         // initialize empty matrix
         matrix() {
             this->row = this->col = 0;
@@ -176,6 +195,15 @@ class matrix {
 
         // initialize a row x col matrix with `value`
         matrix(int row, int col, DATA value) {
+            this->row = row;
+            this->col = col;
+            getMemoryforVal(row,col);
+            for(int i=0; i<row; ++i)
+                for(int j=0; j<col; ++j)
+                    *(val + i*col + j) = value;
+        }
+        
+        matrix(int row, int col, std::complex<DATA> value) {
             this->row = row;
             this->col = col;
             getMemoryforVal(row,col);
@@ -284,25 +312,7 @@ class matrix {
             }
             return *this;
         }   
-        
-        //change dimensions
-        void changeDims(int r, int c) {
-            /*
-                This function will reset memory.
-                It will reshape the matrix and
-                remove old data and reallocate
-                memory for new data.
-                with caution.
-                This is different than the reshape function.
-                Reshape function does not delete the values 
-                of original matrix. Infact it creates a new 
-                matrix which it returns.
-            */
-           this->row = r;
-           this->col = c;
-           this->delMemoryforVal();
-           this->getMemoryforVal(r, c);
-        }
+    
         
         // Reshape
         matrix<DATA> reshape(int newRow, int newCol);

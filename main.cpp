@@ -46,8 +46,9 @@ int main(int arg, char *argv[]) {
     deAlloc(array);
 
     // type conversion handling
-    matrix<double> X(2,3,5.2);
-    matrix<long> Y;
+    std::complex<double> value(5.2,1.5);
+    matrix<std::complex<double>> X(2,3,value);
+    matrix<double> Y;
     Y = X;
     X.display("X:-");
     Y.display("Y:-");

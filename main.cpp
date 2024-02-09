@@ -1,7 +1,6 @@
 #include<iostream>
 #include "matrix.h"
 #include<chrono>
-#include<complex>
 
 using namespace std;
 using namespace linear;
@@ -19,88 +18,38 @@ int main(int arg, char *argv[]) {
     init2dRandArray(array, N, N);
     matrix<double> B(array, N);
 
-    auto start = high_resolution_clock::now();
+    
 
     //benchmarking matrix mul
     cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING\n\n";
+    auto start = high_resolution_clock::now();
     matrix<double> C = A&B;
     //C.display("C:-");
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 
-    cout<<"Time taken: "<<duration.count() <<" milliseconds\n";
-    
-    std::vector<std::vector<std::complex<double>>> complexMatrix;
-    // Initialize the complex matrix
-    complexMatrix.push_back({std::complex<double>(1.0, 2.0), std::complex<double>(3.0, 4.0)});
-    complexMatrix.push_back({std::complex<double>(5.0, 6.0), std::complex<double>(7.0, 8.0)});
-    for (const auto& row : complexMatrix) {
-        for (const auto& element : row) {
-            std::cout << element << ' ';
-        }
-        std::cout << '\n';
-    }
+    // cout<<"\n\n====Matrix Multiply Benchmark Results====\n";
+    // cout<<"Time taken: "<<duration.count() <<" milliseconds\n";
 
-    N=2;
-    std::complex<double> *arr;
-    arr = new std::complex<double>[N*N];
-    init2dRandArray(arr, N, N);
-    matrix<std::complex<double>> K(arr, N, N);
-    K.display("K:-");
-    arr = new std::complex<double>[N*N];
-    init2dRandArray(arr, N, N);
-    matrix<std::complex<double>> L(arr, N, N);
-    deAlloc(arr);
-    L.display("L:-");
+    //benchmarking matrix mul SIMD
+    cout<<"\n\n SIMD MATRIX MUL BENCHMARKING\n\n";
+    auto start1 = high_resolution_clock::now();
+    matrix<double> D = matmul_simd(A,B);
+    //C.display("C:-");
+    auto end1 = high_resolution_clock::now();
+    auto duration1 = duration_cast<milliseconds>(end1-start1);
 
-    (K+L).display("K+L=");
+    cout<<"\n\n====Benchmark Results====\n";
+    cout<<"(Matrix Multiplication) || Time taken: "<<duration.count() <<" milliseconds\n";
 
-    matrix<double> Z = { {1, 2, 3}, {4, 5, 6}};
-    matrix<double> Ab = {{-1.5, 0, -3}, {-4.5, 5, -6.5}};
-    (Z+Ab).display("Z+Ab:-");
+    cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
+    deAlloc(array);
 
-    matrix<double> AB = randomUniform(2);
-    AB.display("AB:-");
-
-    matrix<double> AC = randomUniform(2);
-    AC.display("AC:-");
-    
-    N=3;
-    //double *ara = new double[N*N];
-    // init2dArray(ara, N, N);
-    // matrix<double> BB(ara, N);
-    // cout<<endl<<is_triangular(BB);
-    // BB.display("BB:-");
-    // (!BB).display("transpose(BB):-");
-    // (BB.inv()).display("inv(BB):-");
-    
-    // A 4x3 double matrix 
-    matrix<double> pepe = {{1,2,3.01}, {3.2,4,5},{6.5,7,8},{9,0,1}};
-    pepe.display("pepe:-");
-    pepe.getDims().display("pepe dimensions:-");
-
-    //only real part will contribute in below matrix `nepe`
-    matrix<double> nepe = pepe/(std::complex<double>(3.5,2)); 
-    /* NOTE:-
-    matrix<double> nepe = pepe/(std::complex<int>(3,2))
-
-    above copy expression will generate error, since, `pepe` is a double matrix
-    and complex type has integer elements. So the static_casting alone will not work.
-    There is no workaround for this as of now in the library. 
-    Ensure internal elements' data types of a non-primitive numerical 
-    data types match with those of the matrix's elements' data type.
-
-    One way to think of solving is to provide a separate definition for
-    conversion of internal type of complex number
-    by explicitly doing the conversion of the internal element. Will try to imple-
-    -ment this asap.
-
-    And if it is a custom numerical data type (especially if it is templated), that
-    all operator overloads are well defined and all cases for different internal
-    data types are considered.
-    */ 
-    nepe.display("nepe:-");
-    nepe = pepe(range(1,4),range(2,3));
-    nepe.display("nepe:-");
+    // type conversion handling
+    matrix<double> X(2,3,5.2);
+    matrix<long> Y;
+    Y = X;
+    X.display("X:-");
+    Y.display("Y:-");
     return 0;
 }

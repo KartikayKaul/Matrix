@@ -65,9 +65,11 @@ class matrix {
             3: While using a matrix operation ensure you close the operands with 
                parenthesis with the binary or unary operator that is being used
                 For example, to perform multiplication of A and B to give C we will
-                             write "matrix<int> C = (A & B);"
+                             write "matrix<int> C = (A & B);" It is not necessary
+                             but ensures safety in case ambiguous operator
+                             precedence arises and augments errors.
     */
-    static_assert(std::disjunction<std::is_arithmetic<DATA>, is_complex<DATA>>::value, "`matrix` class only supports only numerical types.");
+    static_assert(std::disjunction<std::is_arithmetic<DATA>, is_complex<DATA>>::value, "`matrix` class only supports numerical types.");
     DATA *val;
     int row, col;
 
@@ -1590,44 +1592,48 @@ matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 }
 
 matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
+    /*
+        Utilizes SIMD instructions to perform matrix multiplication.
+        In short benchmark, the results of OpenMP parallelization
+        in matrix multiplication operator `&` or `matmul` are much
+        faster than any implementation so far.
+    */
     #ifdef __AVX__
         if (A.cols() != B.rows()) {
             throw std::invalid_argument("Matrix dimensions do not match for multiplication.");
         }
-
         int rowsA = A.rows();
         int colsA = A.cols();
         int colsB = B.cols();
-
+        // //std::cout<<rowsA<<" "<<colsA<<" "<<colsB;
         matrix<double> result(rowsA, colsB);
-
+        
+        #pragma omp parallel for
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
-                __m256d sum = _mm256_setzero_pd();
+                __m128d sum = _mm_setzero_pd();  // Initialize sum vector with zeros
+                
+                for (int k = 0; k < colsA; ++k) {
+                    // Load 2 elements from the current row of matrix A and 2 elements from the current column of matrix B
+                    __m128d a = _mm_loadu_pd(&A(i, k));
+                    __m128d b = _mm_loadu_pd(&B(k, j));
 
-                for (int k = 0; k < colsA; k += 4) {
-                    __m256d a = _mm256_loadu_pd(&A(i, k));
-                    __m256d b = _mm256_loadu_pd(&B(k, j));
-                    sum = _mm256_add_pd(sum, _mm256_mul_pd(a, b));
+                    // Perform SIMD multiplication and addition
+                    sum = _mm_add_pd(sum, _mm_mul_pd(a, b));
                 }
-
-                sum = _mm256_hadd_pd(sum, sum);
-                sum = _mm256_hadd_pd(sum, sum);
-
-                result(i, j) = _mm256_cvtsd_f64(sum);
+                // Store the result in the matrix
+                result(i, j) = _mm_cvtsd_f64(sum);
             }
         }
-
         return result;
     #else
-        matrix<double> result(A.rows(), B.cols(), 0.);
+        matrix<double> result(A.rows(), B.cols(), 0.); 
+        std::cout<<"AVX instructions never compiled. See if you used `-mavx` flag.";
         return result;
-        std::cout<<"AVX failed.";
     #endif
 }
-
-/////////
 }//linear namespace
+
 template<typename DATA>
 void init2dArray(DATA *array, int size_0, int size_1) {
     /*

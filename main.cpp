@@ -45,6 +45,7 @@ int main(int arg, char *argv[]) {
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     deAlloc(array);
 
+
     // type conversion handling
     std::complex<double> value(5.2,1.5);
     matrix<std::complex<double>> X(2,3,value);

@@ -410,6 +410,11 @@ matrix<DATA> eye(int);
 template<typename DATA>
 matrix<DATA> diagonal(int, DATA);
 
+matrix<double> upper_triangle_matrix(int);
+matrix<double> lower_triangle_matrix(int);
+matrix<double> utm(int);
+matrix<double> ltm(int);
+
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
 
@@ -1632,6 +1637,53 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         return result;
     #endif
 }
+
+
+/// TRIANGULAR MATRIX GENERATORS ///
+matrix<double> upper_triangle_matrix(int size) {
+    if(size <= 0)
+        throw std::invalid_argument("size is less than 1.");
+    
+    matrix<double> result(size,size,0.);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    
+    std::normal_distribution<double> distribution(0.,1.);
+    
+    for(int i=0; i<size; ++i) {
+        for(int j=i; j<size; ++j) {
+            result(i,j) = distribution(gen);
+        }
+    }
+
+    return result;
+}
+matrix<double> utm(int size) {
+    return upper_triangle_matrix(size);
+}
+
+matrix<double> lower_triangle_matrix(int size) {
+    if(size<=0)
+        throw std::invalid_argument("size is less than 1.");
+
+    matrix<double> result(size,size,0.);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<double> distribution(0.,1.);
+    
+    for(int i=0; i<size; ++i) {
+        for(int j=0; j<=i && j<size; ++j) {
+            result(i,j) = distribution(gen);
+        }
+    }
+    return result;
+}
+matrix<double> ltm(int size) {
+    return lower_triangle_matrix(size);
+}
+
+/////////
 }//linear namespace
 
 template<typename DATA>

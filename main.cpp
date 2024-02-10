@@ -53,5 +53,21 @@ int main(int arg, char *argv[]) {
     Y = X;
     X.display("X:-");
     Y.display("Y:-");
+
+    std::complex<double> value1(1.5, 0.5);
+    matrix<std::complex<double>> G = {{value1},{value1}};
+    G.display();
+
+    matrix<double> UTM = {{1, 0, 0},
+                           {2, 3, 0},
+                           {1, 2, 1}};
+    UTM.display("UTM:-");
+    
+    (UTM.isSymmetric()) ? cout<<"UTM is symmetric.\n" : cout<<"UTM is not symmetric.\n";
+
+    matrix<double> UTM_rand = upper_triangle_matrix(3);
+    UTM_rand.display("UTM_rand:-");
+    matrix<double> LTM_rand = ltm(3);
+    LTM_rand.display("LTM_rand:-");
     return 0;
 }

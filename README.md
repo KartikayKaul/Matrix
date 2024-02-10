@@ -40,10 +40,10 @@ Note that the standard `Matrix Multiplication` implementation invokes OpenMP par
 
 | Matrix Size | Matrix Multiplication | SIMD Matrix Mul | Strassen Matrix Mul |
 |-------------|-----------------------|-----------------|----------------------|
-| n = 512     | Time taken: 250 ms    | Time taken: 255 ms | Time taken: 256 ms    |
-| n = 1024    | Time taken: 1950 ms   | Time taken: 2114 ms | Time taken: 1849 ms   |
-| n = 2048    | Time taken: 15768 ms  | Time taken: 48661 ms | Time taken: 13489 ms  |
-| n = 4096    | Time taken: 132221 ms | Time taken: 555819 ms | Time taken: 99023 ms |
+| n = 512     | 250 ms    |  255 ms |  256 ms    |
+| n = 1024    |  1950 ms   |  2114 ms |  1849 ms   |
+| n = 2048    |  15768 ms  |  48661 ms |  13489 ms  |
+| n = 4096    | : 132221 ms |  555819 ms |  99023 ms |
 
 
 ## Documentation

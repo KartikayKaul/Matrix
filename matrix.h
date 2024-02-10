@@ -414,6 +414,8 @@ matrix<double> upper_triangle_matrix(int);
 matrix<double> lower_triangle_matrix(int);
 matrix<double> utm(int);
 matrix<double> ltm(int);
+matrix<double> triu(int);
+matrix<double tril(int);
 
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
@@ -1662,6 +1664,9 @@ matrix<double> upper_triangle_matrix(int size) {
 matrix<double> utm(int size) {
     return upper_triangle_matrix(size);
 }
+matrix<double> triu(int size) {
+    return upper_triangle_matrix(size);
+}
 
 matrix<double> lower_triangle_matrix(int size) {
     if(size<=0)
@@ -1680,6 +1685,9 @@ matrix<double> lower_triangle_matrix(int size) {
     return result;
 }
 matrix<double> ltm(int size) {
+    return lower_triangle_matrix(size);
+}
+matrix<double> tril(int size) {
     return lower_triangle_matrix(size);
 }
 

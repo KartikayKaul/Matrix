@@ -67,7 +67,7 @@ int main(int arg, char *argv[]) {
 
     matrix<double> UTM_rand = upper_triangle_matrix(3);
     UTM_rand.display("UTM_rand:-");
-    matrix<double> LTM_rand = ltm(3);
+    matrix<double> LTM_rand = tril(3);
     LTM_rand.display("LTM_rand:-");
     return 0;
 }

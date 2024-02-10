@@ -415,7 +415,7 @@ matrix<double> lower_triangle_matrix(int);
 matrix<double> utm(int);
 matrix<double> ltm(int);
 matrix<double> triu(int);
-matrix<double tril(int);
+matrix<double> tril(int);
 
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);

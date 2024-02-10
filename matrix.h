@@ -29,7 +29,6 @@ namespace linear{
 //stringify variable name MACRO
 #define CHANGE_ID_TO_STRING(x) (#x)
 
-
 struct range {
   int start;
   int end;
@@ -267,6 +266,10 @@ class matrix {
         // display contents in a 2d grid form
         void display(const std::string msg="Matrix:-");
         
+        //set `subMatrix` values
+        void setSubMatrix(int,int,int,int, const matrix&);
+        void setSubMatrix(range,range, const matrix&);
+
         ~matrix() {
             delete[] val;
             val = NULL;
@@ -283,17 +286,6 @@ class matrix {
         // Index operator
         DATA& operator()(int, int); //access an element of the matrix
         DATA& operator()(int, int) const;
-
-
-        //helper for conversion
-        template<typename ATAD>
-        constexpr DATA castValue(ATAD value) {
-            return static_cast<DATA>(value);
-        }
-
-        constexpr DATA castValue(std::complex<DATA> value) {
-            return std::real(value);
-        }
 
         //helper for conversion
         //Assignment operator
@@ -1100,8 +1092,31 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
         }
         return m;
     } else {
-        throw std::invalid_argument("Wrong index range received. Check your index Params.");
+        throw std::invalid_argument("slicing matrix error raised - Wrong index range received. Check your index Params.");
     }
+}
+
+//Set SubMatrix operation
+template<typename DATA>
+void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix<DATA>& subMatrix) {
+    int n=this->rows();
+    int m=this->cols();
+    bool validation1 = (this->validateParams(x_0, y_0, n)) && (this->validateParams(x_1, y_1, m));
+    //bool validation2 = !((y_0 - x_0  != n) || (y_1 - x_1 != m)); 
+    if (validation1) {
+        for (int i = x_0; i <= y_0; ++i) {
+            for (int j = x_1; j <= y_1; ++j) {
+                (*this)(i, j) = subMatrix(i - x_0, j - x_1);
+            }
+        }
+    } else {
+        throw std::invalid_argument("setSubMatrix error raised - Wrong index range received. Check your index Params.");
+    }
+}
+
+template<typename DATA>
+void matrix<DATA>::setSubMatrix(range rowRng, range colRng, const matrix<DATA>& subMatrix) {
+    this->setSubMatrix(rowRng.start, rowRng.end, colRng.start, colRng.end, subMatrix);
 }
 
 /// TRANSPOSE OPERATION
@@ -1640,6 +1655,56 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
     #endif
 }
 
+// Strassen's algorithm for multiplying square matrices
+template<typename DATA>
+matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=512) {
+    int n = A.rows();
+
+    if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
+        throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
+    }
+
+    if (n <= base_case_cutoff) {
+        return matmul(A,B);
+    }
+
+    int newSize = n / 2;
+
+    // Partition matrices
+    matrix<DATA> A11 = A.slice(0, newSize, 0, newSize);
+    matrix<DATA> A12 = A.slice(0, newSize, newSize, n);
+    matrix<DATA> A21 = A.slice(newSize, n, 0, newSize);
+    matrix<DATA> A22 = A.slice(newSize, n, newSize, n);
+
+    matrix<DATA> B11 = B.slice(0, newSize, 0, newSize);
+    matrix<DATA> B12 = B.slice(0, newSize, newSize, n);
+    matrix<DATA> B21 = B.slice(newSize, n, 0, newSize);
+    matrix<DATA> B22 = B.slice(newSize, n, newSize, n);
+
+    // Recursive calls
+    matrix<DATA> P1 = strassen_multiply(A11 + A22, B11 + B22);
+    matrix<DATA> P2 = strassen_multiply(A21 + A22, B11);
+    matrix<DATA> P3 = strassen_multiply(A11, B12 - B22);
+    matrix<DATA> P4 = strassen_multiply(A22, B21 - B11);
+    matrix<DATA> P5 = strassen_multiply(A11 + A12, B22);
+    matrix<DATA> P6 = strassen_multiply(A21 - A11, B11 + B12);
+    matrix<DATA> P7 = strassen_multiply(A12 - A22, B21 + B22);
+
+    // Calculate the submatrices of the result
+    matrix<DATA> C11 = P1 + P4 - P5 + P7;
+    matrix<DATA> C12 = P3 + P5;
+    matrix<DATA> C21 = P2 + P4;
+    matrix<DATA> C22 = P1 - P2 + P3 + P6;
+
+    // Combine the submatrices to get the final result
+    matrix<DATA> result(n, n);
+    result.setSubMatrix(0, newSize-1, 0, newSize-1, C11);
+    result.setSubMatrix(0, newSize-1, newSize, n-1, C12);
+    result.setSubMatrix(newSize, n-1, 0, newSize-1, C21);
+    result.setSubMatrix(newSize, n-1, newSize, n-1, C22);
+
+    return result;
+}
 
 /// TRIANGULAR MATRIX GENERATORS ///
 matrix<double> upper_triangle_matrix(int size) {

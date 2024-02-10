@@ -21,7 +21,7 @@ int main(int arg, char *argv[]) {
     
 
     //benchmarking matrix mul
-    cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING\n\n";
+    cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING";
     auto start = high_resolution_clock::now();
     matrix<double> C = A&B;
     //C.display("C:-");
@@ -32,17 +32,24 @@ int main(int arg, char *argv[]) {
     // cout<<"Time taken: "<<duration.count() <<" milliseconds\n";
 
     //benchmarking matrix mul SIMD
-    cout<<"\n\n SIMD MATRIX MUL BENCHMARKING\n\n";
+    cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
     auto start1 = high_resolution_clock::now();
     matrix<double> D = matmul_simd(A,B);
     //C.display("C:-");
     auto end1 = high_resolution_clock::now();
     auto duration1 = duration_cast<milliseconds>(end1-start1);
 
+    auto start2 = high_resolution_clock::now();
+    matrix<double> E = strassen_multiply(A,B);
+    //C.display("C:-");
+    auto end2 = high_resolution_clock::now();
+    auto duration2 = duration_cast<milliseconds>(end2-start2);
+
     cout<<"\n\n====Benchmark Results====\n";
     cout<<"(Matrix Multiplication) || Time taken: "<<duration.count() <<" milliseconds\n";
 
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
+    cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
 
 
@@ -69,5 +76,9 @@ int main(int arg, char *argv[]) {
     UTM_rand.display("UTM_rand:-");
     matrix<double> LTM_rand = tril(3);
     LTM_rand.display("LTM_rand:-");
+    
+    upper_triangle_matrix(3).display("UTM(1):-");
+    utm(3).display("UTM(2):-");
+    triu(3).display("UTM(3):-");
     return 0;
 }

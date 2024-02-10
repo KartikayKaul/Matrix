@@ -12,6 +12,10 @@ Be careful when dealing with `std::complex` matrices. Although I have tested the
 
 Matrix multiplication operation using OpenACC or OpenMP parallelization based on appropriate compiler flag used. If you do not use the flag, the compiler will by default ignore the parallelization directives added in the code and run sequentially.
 
+
+In case of `matmul_simd` function, for it to work you have to add in the extra `-mavx` flag alongwith `-fopenmp` flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
+On side note, `matmul_simd` performs worse than exclusive OpenMP parallelisation used in `&` and `matmul` operations but does job comparable to OpenMP when compared with the OpenACC parallelization.
+
 Compiling using OpenMP:-
 ```bash
 g++ main.cpp -o main -fopenmp

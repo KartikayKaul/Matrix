@@ -38,12 +38,12 @@ In my case, OpenMP produces result in ~1000 ms and OpenACC produces same result 
 ### Benchmarked results 
 Note that the standard `Matrix Multiplication` implementation invokes OpenMP parallelization for matrices of sizes larger than 100.
 
-| Matrix Size | Matrix Multiplication | SIMD Matrix Mul | Strassen Matrix Mul |
+| Matrix Size (n) | Matrix Multiplication | SIMD Matrix Mul | Strassen Matrix Mul |
 |-------------|-----------------------|-----------------|----------------------|
-| n = 512     | 250 ms    |  255 ms |  256 ms    |
-| n = 1024    |  1950 ms   |  2114 ms |  1849 ms   |
-| n = 2048    |  15768 ms  |  48661 ms |  13489 ms  |
-| n = 4096    | : 132221 ms |  555819 ms |  99023 ms |
+|512     | 250 ms    |  255 ms |  256 ms    |
+|1024    |  1950 ms   |  2114 ms |  1849 ms   |
+| 2048    |  15768 ms  |  48661 ms |  13489 ms  |
+|  4096    | : 132221 ms |  555819 ms |  99023 ms |
 
 
 ## Documentation

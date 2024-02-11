@@ -16,6 +16,9 @@ Matrix multiplication operation using OpenACC or OpenMP parallelization based on
 In case of `matmul_simd` function, for it to work you have to add in the extra `-mavx` flag alongwith `-fopenmp` flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
 On side note, `matmul_simd` performs worse than exclusive OpenMP parallelisation used in `&` and `matmul` operations but does job comparable to OpenMP when compared with the OpenACC parallelization.
 
+One more way to speed up operations is to use `-O3` optimization flag but I have not tested the value of the results on large matrices' operations. `matmul_simd` operation does not have any speedup through O3 optimization so it has not been benchmarked with it.
+
+### Commands
 Compiling using OpenMP:-
 ```bash
 g++ main.cpp -o main -fopenmp
@@ -25,6 +28,14 @@ Compiling using OpenACC:-
 ```bash
 g++ main.cpp -o main -fopenacc
 ```
+
+Compiling using `-O3` flag:-
+```bash
+g++ -O3 main.cpp -o main -fopenmp
+```
+
+It is recommended that you apply the -fopenmp flag by default. However, even if you do not add the flag the code will execute without errors but there will be no speedup.
+
 For sizes less than 100, parallization is disabled. This value is hard-coded as of now and cannot be changed by an environment variable or input to the `main` function or using a macros.
 
 I have benchmarked the matrix multiplication on matrix size of 1000x1000 for both OpenACC and OpenMP and OpenMP performs much better. I recommend using the `-fopenmp` flag to make use of parallelization but maybe this varies based on the system. So you can try benchmarking by running the [main.cpp](./main.cpp) file in your system.
@@ -37,15 +48,15 @@ I am thinking of adding [winograd optimization](https://en.wikipedia.org/wiki/Ma
 
 
 ### Benchmarked results 
-Note that the standard `Matrix Multiplication` implementation invokes OpenMP parallelization for matrices of sizes larger than 100.
+Note that the standard `Matrix Multiplication` implementation invokes OpenMP parallelization for matrices of sizes larger than 100. These values are not averaged.
 
-| Matrix Size (n) | Matrix Multiplication | SIMD Matrix Mul | Strassen Matrix Mul |
-|-------------|-----------------------|-----------------|----------------------|
-|512     | 250 ms    |  255 ms |  256 ms    |
-|1024    |  1950 ms   |  2114 ms |  1849 ms   |
-| 2048    |  15768 ms  |  48661 ms |  13489 ms  |
-|  4096    | 132221 ms |  555819 ms |  99023 ms |
-| 8192 |  18.9 min |  81.07 min | 12.26 min |
+| Matrix Size (n) | Matrix Multiplication | SIMD Matrix Mul | Strassen Matrix Mul | Matrix Mul (-O3) | Strassen (-O3) |
+|-------------|-----------------------|-----------------|----------------------| ------------------|------------|
+|512     | 250 ms    |  255 ms |  256 ms    | 18 ms | 18 ms
+|1024    |  1950 ms   |  2114 ms |  1849 ms   | 123 ms | 137 ms
+| 2048    |  15768 ms  |  48661 ms |  13489 ms  | 983 ms | 1044 ms
+|  4096    | 132221 ms |  555819 ms |  99023 ms | 10798 ms | 7952 ms
+| 8192 |  18.9 min |  81.07 min | 12.26 min | 83.2 s | 111.05 s
 
 The efficiency of Strassen Matrix Multiplication here is high due to the fact we are testing this exclusively on matrices of sizes power of 2. Strassen only works with matrices whose dimensions are powers of 2. It can be made to work with square matrices not of power 2 by padding 0's to augment it's size to nearest power of 2. However, I have not implemented that into it.
 
@@ -55,7 +66,7 @@ You can also tinker the `base_case_cutoff` parameter to test what works better f
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 
 ## Updates
-- (commit update timestamp: 1002240943). I have added [`strassen algorithm`](https://en.wikipedia.org/wiki/Strassen_algorithm) for matrix multiplication. It speeds the multiplication for high order matrices by a lot of factor. I have benchmarked the three algorithms for matrix multiplication on matrix sizes starting at 512 since the cutoff value for base case of strassen algorithm is at 512. The benchmark results can be found [here](#benchmarked-results).
+- (commit update timestamp: 1002240943). I have added [`strassen algorithm`](https://en.wikipedia.org/wiki/Strassen_algorithm) for matrix multiplication. It speeds the multiplication for high order matrices by a significant factor. I have benchmarked the three algorithms for matrix multiplication on matrix sizes starting at 512 since the cutoff value for base case of strassen algorithm is at 512. The benchmark results can be found [here](#benchmarked-results).
 - (commit update timestamp: 0902240138). You can try working with `complex` matrices and experiment. If any errors arise, please raise them in issues section. I have tried to make sure that `std::complex` matrices are handled properly handled while type conversion arises.
 - (commit update timestamp: 0902240117).
    - Added `matmul_simd` that uses AVX instructions. Performed benchmarking (sortof) in [main.cpp](./main.cpp) file.

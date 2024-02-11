@@ -33,13 +33,13 @@ int main(int arg, char *argv[]) {
     auto duration = duration_cast<milliseconds>(end-start);
 
 
-    //benchmarking matrix mul SIMD
-    cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
-    auto start1 = high_resolution_clock::now();
-    matrix<double> D = matmul_simd(A,B);
-    //C.display("C:-");
-    auto end1 = high_resolution_clock::now();
-    auto duration1 = duration_cast<milliseconds>(end1-start1);
+    // //benchmarking matrix mul SIMD
+    // cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
+    // auto start1 = high_resolution_clock::now();
+    // matrix<double> D = matmul_simd(A,B);
+    // //C.display("C:-");
+    // auto end1 = high_resolution_clock::now();
+    // auto duration1 = duration_cast<milliseconds>(end1-start1);
 
     //benchmarking matrix mul SIMD
     cout<<"\n\n STRASSEN'S MATRIX MUL BENCHMARKING\n";
@@ -52,7 +52,7 @@ int main(int arg, char *argv[]) {
     cout<<"\n\n====Benchmark Results====\n";
     cout<<"(Matrix Multiplication) || Time taken: "<<duration.count() <<" milliseconds\n";
 
-    cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
+    //cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
 
@@ -76,9 +76,28 @@ int main(int arg, char *argv[]) {
     
     // (UTM.isSymmetric()) ? cout<<"UTM is symmetric.\n" : cout<<"UTM is not symmetric.\n";
 
-    // matrix<double> UTM_rand = upper_triangle_matrix(3);
+    int count=0;
+    double sum=0;
+    int itr=0, END=1000;
+    while(itr<END) {
+        auto startutm = high_resolution_clock::now();
+        matrix<double> UTM_rand = upper_triangle_matrix(3);
+        //UTM_rand.display();
+        auto endutm = high_resolution_clock::now();
+        auto durationutm = duration_cast<microseconds>(endutm-startutm);
+
+        sum += durationutm.count();
+        count++;
+        itr++;
+    }
+
+
+    cout<<"\n\nAvg duration of generating the UTM:- "<<sum/count<<" microseconds.\n";
+
     // UTM_rand.display("UTM_rand:-");
-    // matrix<double> LTM_rand = tril(3);
+    matrix<double> LTM = {{1, 0, 0,},{1, 2, 0}, {1, 2, 3}};
+    matrix<double> UTM = {{1, 2, 3}, {0, 2, 3}, {0, 0, 3}};
+    (LTM&UTM).display("LTM & UTM:-");
     // LTM_rand.display("LTM_rand:-");
     
     // upper_triangle_matrix(3).display("UTM(1):-");

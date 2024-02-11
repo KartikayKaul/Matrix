@@ -13,7 +13,7 @@ int main() {
                         {5, 4, 3, 2}};
     A.display("A:-");
 
-    matrixView<double> viewA(A, range(2), range(2));
+    matrixView<double> viewA(A, range(2), range(3));
     viewA.display("viewA:-");
     return 0;
 }

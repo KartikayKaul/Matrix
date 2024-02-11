@@ -32,7 +32,8 @@ In my case, OpenMP produces result in ~1000 ms and OpenACC produces same result 
 
 ### Strassen's algorithm
 
-`strassen_multiply` has been implemented for square matrices whose order is 2^n. The algorithm was sped-up by setting the `base_case_cutoff` parameter to 512 by default. This can be adjusted. Recommended values are in powers of 2. The algorithms were benchmarked on different matrix sizes of order (2^n). Results are provided below that compare the results of algorithm to matrix sizes.
+`strassen_multiply` has been implemented for square matrices whose order is 2^n. The algorithm was sped-up by setting the `base_case_cutoff` parameter to 512 by default. This can be adjusted. It is imperative that the dimensions are in powers of 2 for Strassen algorithm. The algorithms were benchmarked on different matrix sizes of order (2^n). Results are provided below that compare the results of algorithm to matrix sizes.
+I am thinking of adding [winograd optimization](https://en.wikipedia.org/wiki/Matrix_multiplication_algorithm#sub-cubic-algorithms) within Strassen algorithm to test it against with or without this optimization as well as compare with other algorithms.
 
 
 ### Benchmarked results 
@@ -43,8 +44,12 @@ Note that the standard `Matrix Multiplication` implementation invokes OpenMP par
 |512     | 250 ms    |  255 ms |  256 ms    |
 |1024    |  1950 ms   |  2114 ms |  1849 ms   |
 | 2048    |  15768 ms  |  48661 ms |  13489 ms  |
-|  4096    | : 132221 ms |  555819 ms |  99023 ms |
+|  4096    | 132221 ms |  555819 ms |  99023 ms |
+| 8192 |  18.9 min |  81.07 min | 12.26 min |
 
+The efficiency of Strassen Matrix Multiplication here is high due to the fact we are testing this exclusively on matrices of sizes power of 2. Strassen only works with matrices whose dimensions are powers of 2. It can be made to work with square matrices not of power 2 by padding 0's to augment it's size to nearest power of 2. However, I have not implemented that into it.
+
+You can also tinker the `base_case_cutoff` parameter to test what works better for your input.
 
 ## Documentation
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.

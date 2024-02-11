@@ -10,16 +10,20 @@ int main(int arg, char *argv[]) {
     double *array;
     int N = std::atoi(argv[1]);
 
-    cout<<"N:-"<<N<<endl;
-    array = new double[N*N];
-    init2dRandArray(array, N, N);
-    matrix<double> A;
-    A.updateWithArray(array,N,N);
-    init2dRandArray(array, N, N);
-    matrix<double> B(array, N);
-
+    // cout<<"N:-"<<N<<endl;
+    // array = new double[N*N];
+    // init2dRandArray(array, N, N);
+    // matrix<double> A;
+    // A.updateWithArray(array,N,N);
+    // init2dRandArray(array, N, N);
+    // matrix<double> B(array, N);
     
+    cout<<"\nGenerating two "<<N<<'x'<<N<<" random matrices with double values... ";
+    matrix<double> A = randomUniform(N,N);
+    matrix<double> B = randomUniform(N,N);
+    cout<<"\nAllocation Complete.";
 
+    cout<<"\n--:BENCHMARKING:--";
     //benchmarking matrix mul
     cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING";
     auto start = high_resolution_clock::now();
@@ -28,8 +32,6 @@ int main(int arg, char *argv[]) {
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 
-    // cout<<"\n\n====Matrix Multiply Benchmark Results====\n";
-    // cout<<"Time taken: "<<duration.count() <<" milliseconds\n";
 
     //benchmarking matrix mul SIMD
     cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
@@ -55,32 +57,32 @@ int main(int arg, char *argv[]) {
     deAlloc(array);
 
 
-    // type conversion handling
-    std::complex<double> value(5.2,1.5);
-    matrix<std::complex<double>> X(2,3,value);
-    matrix<double> Y;
-    Y = X;
-    X.display("X:-");
-    Y.display("Y:-");
+    // // type conversion handling
+    // std::complex<double> value(5.2,1.5);
+    // matrix<std::complex<double>> X(2,3,value);
+    // matrix<double> Y;
+    // Y = X;
+    // X.display("X:-");
+    // Y.display("Y:-");
 
-    std::complex<double> value1(1.5, 0.5);
-    matrix<std::complex<double>> G = {{value1},{value1}};
-    G.display();
+    // std::complex<double> value1(1.5, 0.5);
+    // matrix<std::complex<double>> G = {{value1},{value1}};
+    // G.display();
 
-    matrix<double> UTM = {{1, 0, 0},
-                           {2, 3, 0},
-                           {1, 2, 1}};
-    UTM.display("UTM:-");
+    // matrix<double> UTM = {{1, 0, 0},
+    //                        {2, 3, 0},
+    //                        {1, 2, 1}};
+    // UTM.display("UTM:-");
     
-    (UTM.isSymmetric()) ? cout<<"UTM is symmetric.\n" : cout<<"UTM is not symmetric.\n";
+    // (UTM.isSymmetric()) ? cout<<"UTM is symmetric.\n" : cout<<"UTM is not symmetric.\n";
 
-    matrix<double> UTM_rand = upper_triangle_matrix(3);
-    UTM_rand.display("UTM_rand:-");
-    matrix<double> LTM_rand = tril(3);
-    LTM_rand.display("LTM_rand:-");
+    // matrix<double> UTM_rand = upper_triangle_matrix(3);
+    // UTM_rand.display("UTM_rand:-");
+    // matrix<double> LTM_rand = tril(3);
+    // LTM_rand.display("LTM_rand:-");
     
-    upper_triangle_matrix(3).display("UTM(1):-");
-    utm(3).display("UTM(2):-");
-    triu(3).display("UTM(3):-");
+    // upper_triangle_matrix(3).display("UTM(1):-");
+    // utm(3).display("UTM(2):-");
+    // triu(3).display("UTM(3):-");
     return 0;
 }

@@ -179,6 +179,8 @@ class matrix {
             this->row =
             this->col = n;
             getMemoryforVal(n,n);
+            
+            #pragma omp parallel for
             for(int i=0; i<n; ++i)
                 for(int j=0; j<n; ++j)
                     *(val + i*n + j) = *(data + i*n + j);
@@ -189,6 +191,8 @@ class matrix {
             this->row = row;
             this->col = col;
             getMemoryforVal(this->row,this->col);
+
+            #pragma omp parallel for
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
                     *(val + i*col + j) = *(data + i*col + j);
@@ -199,6 +203,8 @@ class matrix {
             this->row = row;
             this->col = col;
             getMemoryforVal(row,col);
+
+            #pragma omp parallel for
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
                     *(val + i*col + j) = value;
@@ -208,6 +214,8 @@ class matrix {
             this->row = row;
             this->col = col;
             getMemoryforVal(row,col);
+            
+            #pragma omp parallel for
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
                     *(val + i*col + j) = value;
@@ -218,6 +226,8 @@ class matrix {
             this->row = data.size();
             this->col = data[0].size();
             getMemoryforVal(this->row, this->col);
+
+            #pragma omp parallel for
             for(int i=0; i<this->row; ++i)
                 for(int j=0; j<this->col; ++j)
                     *(val + i*(this->col) + j) = data[i][j];
@@ -228,6 +238,8 @@ class matrix {
             this->row = m.row;
             this->col = m.col;
             this->getMemoryforVal(this->row, this->col);
+
+            #pragma omp parallel for
             for(int i=0; i<this->row; ++i)
                 for(int j=0; j<this->col; ++j)
                     *(val + (this->col)*i + j) = *(m.val + i*m.col + j);
@@ -1776,48 +1788,55 @@ void init2dRandArray(int *array, int size_0, int size_1, int start=0, int end=9)
      UTIL FUNCTION
         Flattened 2d array in row major form will be initialised using a
         uniform integer distribution.
-    */
+    */ 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distribution(start, end);
+
     for (int i = 0; i < size_0; ++i) {
-        std::default_random_engine generator(std::random_device{}());
-        std::uniform_int_distribution<int> distribution(start, end);
         for (int j = 0; j < size_1; ++j)
-            *(array + i * size_1 + j) = distribution(generator);
+            *(array + i * size_1 + j) = distribution(gen);
     }
 }
 
 void init2dRandArray(float *array, int size_0, int size_1, float start=0., float end=1.) {
     
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> distribution(start, end);
+
     for (int i = 0; i < size_0; ++i) {
-        std::default_random_engine generator(std::random_device{}());
-        std::uniform_real_distribution<float> distribution(start, end);
         for (int j = 0; j < size_1; ++j)
-            *(array + i * size_1 + j) = distribution(generator);
+            *(array + i * size_1 + j) = distribution(gen);
     }
 }
 
 void init2dRandArray(double *array, int size_0, int size_1, double start=0., double end=1.) {
     
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> distribution(start, end);
+
     for (int i = 0; i < size_0; ++i) {
-        std::default_random_engine generator(std::random_device{}());
-        std::uniform_real_distribution<double> distribution(start, end);
         for (int j = 0; j < size_1; ++j)
-            *(array + i * size_1 + j) = distribution(generator);
+            *(array + i * size_1 + j) = distribution(gen);
     }
 }
 
 void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double start=-1., double end=1.) {
     std::complex<double> randomComplexNumber;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> realDisbn(start, end);
+    std::uniform_real_distribution<double> imagDisbn(start, end);
     for (int i = 0; i < size_0; ++i) {
-        std::default_random_engine generator(std::random_device{}());
-        std::uniform_real_distribution<double> realDisbn(start, end);
-        std::uniform_real_distribution<double> imagDisbn(start, end);
         for (int j = 0; j < size_1; ++j) {
-                double realPart = realDisbn(generator);
-                double imagPart = imagDisbn(generator);
-                randomComplexNumber.real(realPart);
-                randomComplexNumber.imag(imagPart);
-                 *(array + i * size_1 + j) = randomComplexNumber;
-        }          
+            double realPart = realDisbn(gen);
+            double imagPart = imagDisbn(gen);
+            randomComplexNumber.real(realPart);
+            randomComplexNumber.imag(imagPart);
+            *(array + i * size_1 + j) = randomComplexNumber;
+        }
     }
 }
 #endif // MATRIX_H

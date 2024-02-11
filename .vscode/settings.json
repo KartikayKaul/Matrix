@@ -62,6 +62,8 @@
         "locale": "cpp",
         "ratio": "cpp",
         "xlocbuf": "cpp",
-        "xlocmes": "cpp"
+        "xlocmes": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp"
     }
 }

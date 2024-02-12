@@ -56,7 +56,7 @@ Note that the standard `Matrix Multiplication` implementation invokes OpenMP par
 |1024    |  1950 ms   |  2114 ms |  1849 ms   | 123 ms | 137 ms
 | 2048    |  15768 ms  |  48661 ms |  13489 ms  | 983 ms | 1044 ms
 |  4096    | 132221 ms |  555819 ms |  99023 ms | 10798 ms | 7952 ms
-| 8192 |  18.9 min |  81.07 min | 12.26 min | 83.2 s | 111.05 s
+| 8192 |  18.9 min |  81.07 min | 12.26 min | 110.7 s | 64.3 s
 
 The efficiency of Strassen Matrix Multiplication here is high due to the fact we are testing this exclusively on matrices of sizes power of 2. Strassen only works with matrices whose dimensions are powers of 2. It can be made to work with square matrices not of power 2 by padding 0's to augment it's size to nearest power of 2. However, I have not implemented that into it.
 

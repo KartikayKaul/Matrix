@@ -29,7 +29,7 @@ class matrixView {
         return orgMatrix(adjustedRowIndex, adjustedColIndex);
     }
 
-    void display(const std::string);
+    void display(const std::string msg=":-");
 };
 
 template<typename DATA>

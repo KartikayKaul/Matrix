@@ -36,12 +36,7 @@ class matrixView {
 
 template<typename DATA>
 matrix<DATA> matrixView<DATA>::cvtToMatrix() {
-    matrix<DATA> res(rowRange.length, colRange.length);
-    for(int i=0; i<rowRange.length; ++i) {
-        for(int j=0; j<colRange.length; ++j) {
-            res(i,j) = orgMatrix(rowRange.start + i, colRange.start +j);
-        }
-    }
+    matrix<DATA> res = orgMatrix(rowRange,colRange);
 
     return res;
 }

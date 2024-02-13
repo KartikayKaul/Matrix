@@ -15,5 +15,8 @@ int main() {
 
     matrixView<double> viewA(A, range(2), range(3));
     viewA.display("viewA:-");
+
+    matrix<double> splitA = viewA.cvtToMatrix();
+    splitA.display(CHANGE_ID_TO_STRING(splitA));
     return 0;
 }

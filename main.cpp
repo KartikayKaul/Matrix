@@ -69,39 +69,21 @@ int main(int arg, char *argv[]) {
     // matrix<std::complex<double>> G = {{value1},{value1}};
     // G.display();
 
-    // matrix<double> UTM = {{1, 0, 0},
-    //                        {2, 3, 0},
-    //                        {1, 2, 1}};
-    // UTM.display("UTM:-");
-    
-    // (UTM.isSymmetric()) ? cout<<"UTM is symmetric.\n" : cout<<"UTM is not symmetric.\n";
+    matrix<double> A1 = {{1,2,3},{3,2,1}};
+    matrix<double> A2 = {{1,2,3},{3,2,1}};
 
-    int count=0;
-    double sum=0;
-    int itr=0, END=1000;
-    while(itr<END) {
-        auto startutm = high_resolution_clock::now();
-        matrix<double> UTM_rand = upper_triangle_matrix(3);
-        //UTM_rand.display();
-        auto endutm = high_resolution_clock::now();
-        auto durationutm = duration_cast<microseconds>(endutm-startutm);
+    (A1==A2).display("A1==A2");
 
-        sum += durationutm.count();
-        count++;
-        itr++;
-    }
+    matrix<double> A3 = {{1, 2}, {3,4}};
+    matrix<double> A4 = {{10,11},{12,13}};
 
+    cout<<"\nBefore Swapping\n";
+    A3.display("A3:-");
+    A4.display("A4:-");
 
-    cout<<"\n\nAvg duration of generating the UTM:- "<<sum/count<<" microseconds.\n";
-
-    // UTM_rand.display("UTM_rand:-");
-    matrix<double> LTM = {{1, 0, 0,},{1, 2, 0}, {1, 2, 3}};
-    matrix<double> UTM = {{1, 2, 3}, {0, 2, 3}, {0, 0, 3}};
-    (LTM&UTM).display("LTM & UTM:-");
-    // LTM_rand.display("LTM_rand:-");
-    
-    // upper_triangle_matrix(3).display("UTM(1):-");
-    // utm(3).display("UTM(2):-");
-    // triu(3).display("UTM(3):-");
+    A3.swapValues(A4);
+    cout<<"\nAfter Swapping\n";
+    A3.display("A3:-");
+    A4.display("A4:-");
     return 0;
 }

@@ -16,6 +16,9 @@
 #include<type_traits>
 #include<immintrin.h>
 
+// testing
+#include<algorithm>
+
 namespace linear{
 // macros for deallocation
 #define deAlloc(x) delete[] x; x = NULL;
@@ -72,10 +75,18 @@ class matrix {
     DATA *val;
     int row, col;
 
+
+    DATA *first = NULL;
+    DATA *last = NULL;
+
     //deallocate memory for Val
     void delMemoryforVal() {
         delete[] this->val;
         this->val = NULL;
+
+        if(this->first == this->val) {
+            this->first = NULL;
+        }
     }
 
     // memory allocation for internal data structure holding the values
@@ -86,6 +97,10 @@ class matrix {
             std::cerr << "Heap memory allocation failed. "<< e.what()<<std::endl;
             std::exit(EXIT_FAILURE);
         }
+
+        //experimental
+        first = this->val;
+        last = this->val + (this->rows()*this->cols());
     }
 
     // validate the Param values
@@ -115,6 +130,22 @@ class matrix {
     void pickPivotFullPivoting(int, int&, int&);
 
     public:
+        // get total memory of the data
+        int getTotalMemory() const {
+            return sizeof(DATA) * (last - first);
+        }
+
+        //experimental
+
+        //swap matrices contents
+        void swapValues(matrix<DATA>& other) {
+            if(other.rows() != this->rows() || other.cols() != this->cols()) {
+                throw std::domain_error("swapValues() - matrices have different dimensions.\n");
+            }
+
+            std::swap_ranges(this->first, this->last, other.first);
+        }
+
         // Getting matrix dimensions
         matrix<int> getDims() const {
             /*
@@ -285,6 +316,9 @@ class matrix {
         ~matrix() {
             delete[] val;
             val = NULL;
+            if (first == val) {
+                first = NULL;
+            }
         }
 
         /////// MATRIX OPERATIONS
@@ -396,7 +430,14 @@ template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
-bool operator==(const matrix<DATA>&, const matrix<DATA>&);
+matrix<bool> operator==(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA, typename ATAD,\
+         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator==(const matrix<DATA>&, const ATAD);
+template<typename DATA, typename ATAD,\
+         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator==(const ATAD,const matrix<DATA>&);
+
 template<typename DATA>
 bool operator!=(const matrix<DATA>&, const matrix<DATA>&);
 
@@ -1513,8 +1554,26 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 }
 
 template<typename DATA>
-bool operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    return m1.isComparable(m2);
+matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    if(!m1.isComparable(m2))
+        throw std::domain_error("corresponding dimensions must match");
+    matrix<bool> res(m1.rows(), m1.cols(), true);
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++)
+            if(m1(i,j) != m2(i,j))
+                res(i,j) = false;
+    return res;
+}
+
+template<typename DATA, typename ATAD,\
+typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
+    return matrix<bool>();
+}
+template<typename DATA, typename ATAD,\
+typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator==(const ATAD value, const matrix<DATA>& m1) {
+    return matrix<bool>();
 }
 
 template<typename DATA>

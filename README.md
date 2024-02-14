@@ -66,6 +66,7 @@ You can also tinker the `base_case_cutoff` parameter to test what works better f
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 
 ## Updates
+- (commit update timestamp: 1402240500). Some experimental code added that does not interfere with other working code. I have added two pointers that point to the `first` and `last` positions in the contiguous memory locations whose initial block is pointed to by `val` in the matrix class. Currently `getTotalMemory` and `swapValues` member functions make use of first and last pointers and the destructor and constructor initialize them when memory is allocated in heap and destroyes them when it goes out of scope.
 - (commit update timestamp: 1002240943). I have added [`strassen algorithm`](https://en.wikipedia.org/wiki/Strassen_algorithm) for matrix multiplication. It speeds the multiplication for high order matrices by a significant factor. I have benchmarked the three algorithms for matrix multiplication on matrix sizes starting at 512 since the cutoff value for base case of strassen algorithm is at 512. The benchmark results can be found [here](#benchmarked-results).
 - (commit update timestamp: 0902240138). You can try working with `complex` matrices and experiment. If any errors arise, please raise them in issues section. I have tried to make sure that `std::complex` matrices are handled properly handled while type conversion arises.
 - (commit update timestamp: 0902240117).

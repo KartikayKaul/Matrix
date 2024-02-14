@@ -1,3 +1,4 @@
+#pragma once
 #ifndef MATRIX_VIEW_H
 #define MATRIX_VIEW_H
 
@@ -37,7 +38,6 @@ class matrixView {
 template<typename DATA>
 matrix<DATA> matrixView<DATA>::cvtToMatrix() {
     matrix<DATA> res = orgMatrix(rowRange,colRange);
-
     return res;
 }
 

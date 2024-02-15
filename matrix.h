@@ -1236,38 +1236,46 @@ void matrix<DATA>::display(const std::string msg)  {
 
     int max_precision = MATRIX_PRECISION;
     int padding = 1;
-
-    // Find the maximum number of digits in the matrix
-    int maxDigits = 1;
-    for (i = 0; i < this->row; ++i) {
-        for (j = 0; j < this->col; ++j) {
-            std::stringstream stream;
-            stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
-            std::string str = stream.str();
-
-            size_t pos = str.find_last_not_of('0');
-            if (pos != std::string::npos && str[pos] == '.')
-                pos--;
-
-            maxDigits = std::max(maxDigits, static_cast<int>(pos + 1));
+    
+    // if it is a bool matrix use different logic
+    if constexpr(std::is_same_v<DATA,bool>) {
+        for(int i=0; i<this->rows(); i++) {
+            for(int j=0; j<this->cols();j++)
+                std::cout << std::setw(5)<< std::boolalpha << (*(val + (this->col) * i + j)) << " ";
+            std::cout<<std::endl;
         }
-    }
+    } else {
+        // Find the maximum number of digits in the matrix
+        int maxDigits = 1;
+        for (i = 0; i < this->row; ++i) {
+            for (j = 0; j < this->col; ++j) {
+                std::stringstream stream;
+                stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
+                std::string str = stream.str();
 
-    // Set the width based on the maximum number of digits
-    int width = maxDigits + padding;
-    for (i = 0; i < this->row; ++i) {
-        for (j = 0; j < this->col; ++j) {
-            std::stringstream stream;
-            stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
-            std::string str = stream.str();
+                size_t pos = str.find_last_not_of('0');
+                if (pos != std::string::npos && str[pos] == '.')
+                    pos--;
 
-            size_t pos = str.find_last_not_of('0');
-            if (pos != std::string::npos && str[pos] == '.')
-                pos--;
-            std::cout << std::setw(width) << str.substr(0, pos + 1);
+                maxDigits = std::max(maxDigits, static_cast<int>(pos + 1));
+            }
         }
-        std::cout << "\n";
-    }
+        // Set the width based on the maximum number of digits
+        int width = maxDigits + padding;
+        for (i = 0; i < this->row; ++i) {
+            for (j = 0; j < this->col; ++j) {
+                std::stringstream stream;
+                stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
+                std::string str = stream.str();
+
+                size_t pos = str.find_last_not_of('0');
+                if (pos != std::string::npos && str[pos] == '.')
+                    pos--;
+                std::cout << std::setw(width) << str.substr(0, pos + 1);
+            }
+            std::cout << "\n";
+        }
+    } //if not bool type else condition
 }
 
 /// File operation on saving a matrix
@@ -1568,12 +1576,26 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 template<typename DATA, typename ATAD,\
 typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
-    return matrix<bool>();
+    matrix<bool> res(m1.rows(), m1.cols(), true);
+    DATA tval;
+
+    if constexpr(!std::is_same_v<DATA,ATAD>) {
+            tval = static_cast<DATA>(value);
+    } else {
+        tval = value;
+    }
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++) {
+            if(m1(i,j) != tval)
+                res(i,j) = false;
+        }    
+    return res;
 }
+
 template<typename DATA, typename ATAD,\
 typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const ATAD value, const matrix<DATA>& m1) {
-    return matrix<bool>();
+    return (m1==value);
 }
 
 template<typename DATA>

@@ -13,6 +13,7 @@ class matrixView {
     range colRange;
 
     public:
+    matrixView(matrix<DATA>& mat) : orgMatrix(mat), rowRange(mat.rows()), colRange(mat.cols()) {}
     matrixView(matrix<DATA>& mat, int startRow, int endRow, int startCol, int endCol):\
     orgMatrix(mat), rowRange(startRow, endRow), colRange(startCol, endCol) {}
 
@@ -49,7 +50,7 @@ void matrixView<DATA>::display(const std::string msg) {
 
     // zero size matrix display
     if(this->rowRange.size() == 0 || this->colRange.size() == 0) {
-        std::cout<<"(empty matrix)\n";
+        std::cout<<" (empty matrix)\n";
         return;
     }
 

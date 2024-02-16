@@ -134,15 +134,11 @@ class matrix {
         int getTotalMemory() const {
             return sizeof(DATA) * (last - first);
         }
-
-        //experimental
-
         //swap matrices contents
         void swapValues(matrix<DATA>& other) {
             if(other.rows() != this->rows() || other.cols() != this->cols()) {
                 throw std::domain_error("swapValues() - matrices have different dimensions.\n");
             }
-
             std::swap_ranges(this->first, this->last, other.first);
         }
 
@@ -168,7 +164,7 @@ class matrix {
                 It will reshape the matrix and
                 remove old data and reallocate
                 memory for new data.
-                with caution.
+                Use with caution.
                 This is different than the reshape function.
                 Reshape function does not delete the values 
                 of original matrix. Infact it creates a new 
@@ -183,13 +179,6 @@ class matrix {
         // initialize empty matrix
         matrix() {
             this->row = this->col = 0;
-            /*
-                following line of code is defining 0 size memory in
-                heap. Weird thing I know. By theory it should 
-                show undefined behaviour but it hasn't shown any so far. 
-                this is an undefined, empty matrix.
-            */
-            getMemoryforVal(0, 0);
         }
 
         // initialize a square matrix
@@ -210,8 +199,7 @@ class matrix {
             this->row =
             this->col = n;
             getMemoryforVal(n,n);
-            
-            #pragma omp parallel for
+           
             for(int i=0; i<n; ++i)
                 for(int j=0; j<n; ++j)
                     *(val + i*n + j) = *(data + i*n + j);
@@ -223,7 +211,6 @@ class matrix {
             this->col = col;
             getMemoryforVal(this->row,this->col);
 
-            #pragma omp parallel for
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
                     *(val + i*col + j) = *(data + i*col + j);
@@ -235,7 +222,6 @@ class matrix {
             this->col = col;
             getMemoryforVal(row,col);
 
-            #pragma omp parallel for
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
                     *(val + i*col + j) = value;
@@ -246,7 +232,6 @@ class matrix {
             this->col = col;
             getMemoryforVal(row,col);
             
-            #pragma omp parallel for
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
                     *(val + i*col + j) = value;
@@ -258,10 +243,20 @@ class matrix {
             this->col = data[0].size();
             getMemoryforVal(this->row, this->col);
 
-            #pragma omp parallel for
             for(int i=0; i<this->row; ++i)
                 for(int j=0; j<this->col; ++j)
                     *(val + i*(this->col) + j) = data[i][j];
+        }
+
+        //initialize a row vector 1xn using 1d std::vector
+        matrix(std::vector<DATA> data) {
+            this->row = 1;
+            this->col = data.size();
+            getMemoryforVal(this->row, this->col);
+
+            for(int i=0; i<1; ++i)
+                for(int j=0; j<this->col; ++j)
+                    *(val + i*(this->col) + j) = data[j];
         }
 
         //copy constructor
@@ -314,10 +309,12 @@ class matrix {
         void setSubMatrix(range,range, const matrix&);
 
         ~matrix() {
-            delete[] val;
-            val = NULL;
-            if (first == val) {
-                first = NULL;
+            if(this->row > 0 && this->col > 0) {
+                delete[] val;
+                val = NULL;
+                if (first == val) {
+                    first = NULL;
+                }
             }
         }
 
@@ -333,7 +330,6 @@ class matrix {
         DATA& operator()(int, int); //access an element of the matrix
         DATA& operator()(int, int) const;
 
-        //helper for conversion
         //Assignment operator
         template<typename ATAD>
         matrix<DATA> &operator=(const matrix<ATAD>& m1) {
@@ -353,14 +349,13 @@ class matrix {
             return *this;
         }   
     
-        
         // Reshape
         matrix<DATA> reshape(int newRow, int newCol);
 
         // Transpose operation
         matrix<DATA> operator!(); 
         matrix<DATA> transpose();
-        matrix<DATA> T(){ return this->transpose();};
+        matrix<DATA> T(){ return this->transpose();}
 
         /// Slice operation
         matrix<DATA> slice(int, int, int, int);

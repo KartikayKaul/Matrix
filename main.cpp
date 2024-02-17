@@ -57,37 +57,33 @@ int main(int arg, char *argv[]) {
     deAlloc(array);
 
 
-    // // type conversion handling
-    // std::complex<double> value(5.2,1.5);
-    // matrix<std::complex<double>> X(2,3,value);
-    // matrix<double> Y;
-    // Y = X;
-    // X.display("X:-");
-    // Y.display("Y:-");
+    // type conversion handling
+    std::complex<double> value(5.2,1.5);
+    matrix<std::complex<double>> X(2,3,value);
+    matrix<double> Y;
+    Y = X.reshape(1,6);
+    X.display("X:-");
+    Y.display("Y:-");
 
-    // std::complex<double> value1(1.5, 0.5);
-    // matrix<std::complex<double>> G = {{value1},{value1}};
-    // G.display();
+    std::complex<double> value1(1.5, 0.5);
+    matrix<std::complex<double>> G = {{value1},{value1}};
+    G.display();
 
-    matrix<double> A1 = {{1,2,3},{3,2,1}};
-    matrix<double> A2 = {{1,2,3},{3,2,1}};
+    matrix<double> B1 = {{1, 2, 3}};
+    (B1.T()&B1).display("B1' * B1 = ");
 
-    (A1==A2).display("A1==A2");
+    matrix<double> B2(4);
+    B2.iota(-5);
 
-    matrix<double> A3 = {{1, 2}, {3,4}};
-    matrix<double> A4 = {{10,11},{12,13}};
+    B2.display("B2:-");
 
-    cout<<"\nBefore Swapping\n";
-    A3.display("A3:-");
-    A4.display("A4:-");
-
-    A3.swapValues(A4);
-    cout<<"\nAfter Swapping\n";
-    A3.display("A3:-");
-    A4.display("A4:-");
-
-    (A3==10).display("A3==10:-");
-    (3==A4).display("3==A4:-");
-
+    matrix<double> B3(1,15,2);
+    B3.display("aha");
+    B3.iota();
+    matrix<double> B4;
+    B4 = B3.reshape(3,5);
+    
+    B3.display("B3:-");
+    B4.display("B4:-");
     return 0;
 }

@@ -81,22 +81,25 @@ class matrix {
 
     //deallocate memory for Val
     void delMemoryforVal() {
-        delete[] this->val;
-        this->val = NULL;
-
-        if(this->first == this->val) {
+        if(this->rows() > 0 && this->cols() > 0) {
             this->first = NULL;
+            this->last = NULL;
+
+            delete[] this->val;
+            this->val = NULL;
         }
     }
 
     // memory allocation for internal data structure holding the values
-    void getMemoryforVal(int row, int col) {
+    void getMemoryforVal(int r, int c) {
         try {
-            this->val = new DATA[row*col];
+            this->val = new DATA[r*c];
+            
         }  catch(const std::bad_alloc& e) {
-            std::cerr << "Heap memory allocation failed. "<< e.what()<<std::endl;
-            std::exit(EXIT_FAILURE);
+            std::cerr<< "Heap memory allocation failed."<<e.what()<<"\n";
         }
+        this->row = r;
+        this->col = c;
 
         //experimental
         first = this->val;
@@ -117,7 +120,7 @@ class matrix {
     
     // validate the index
     bool isValidIndex(int r, int c) const {
-        matrix<int> dims = this->getDims();
+        matrix<int> dims = getDims();
         int nRows = dims(0,0);
         int nCols = dims(0,1);
         return r >= 0 && r < nRows && c >= 0 && c < nCols;
@@ -130,6 +133,7 @@ class matrix {
     void pickPivotFullPivoting(int, int&, int&);
 
     public:
+         //// EXPERIMENTAL FUNCTIONS ////
         // get total memory of the data
         int getTotalMemory() const {
             return sizeof(DATA) * (last - first);
@@ -141,9 +145,10 @@ class matrix {
             }
             std::swap_ranges(this->first, this->last, other.first);
         }
+        //// EXPERIMENTAL ENDS ////
 
         // Getting matrix dimensions
-        matrix<int> getDims() const {
+        matrix<int> getDims() {
             /*
                 Returns a 1x2 integer matrix (say Dims) with row in Dims(0,0) and col in Dims(0,1) 
             */
@@ -170,8 +175,6 @@ class matrix {
                 of original matrix. Infact it creates a new 
                 matrix which it returns.
             */
-           this->row = r;
-           this->col = c;
            this->delMemoryforVal();
            this->getMemoryforVal(r, c);
         }
@@ -183,21 +186,16 @@ class matrix {
 
         // initialize a square matrix
         matrix(int n) {
-            this->row = this->col = n;
             getMemoryforVal(n,n);
         }
 
         // initialize a rectangular matrix
         matrix(int row, int col) {
-            this->row = row;
-            this->col = col;
-            getMemoryforVal(this->row,this->col);
+            getMemoryforVal(row,col);
         }
 
         // initialize a square matrix using a flattened 2d array input
         matrix(DATA *data, int n) {
-            this->row =
-            this->col = n;
             getMemoryforVal(n,n);
            
             for(int i=0; i<n; ++i)
@@ -207,9 +205,7 @@ class matrix {
 
         // initialize a rectangle matrix using a flattened 2d array input
         matrix(DATA *data, int row, int col) {
-            this->row = row;
-            this->col = col;
-            getMemoryforVal(this->row,this->col);
+            getMemoryforVal(row,col);
 
             for(int i=0; i<row; ++i)
                 for(int j=0; j<col; ++j)
@@ -218,8 +214,6 @@ class matrix {
 
         // initialize a row x col matrix with `value`
         matrix(int row, int col, DATA value) {
-            this->row = row;
-            this->col = col;
             getMemoryforVal(row,col);
 
             for(int i=0; i<row; ++i)
@@ -228,8 +222,6 @@ class matrix {
         }
         
         matrix(int row, int col, std::complex<DATA> value) {
-            this->row = row;
-            this->col = col;
             getMemoryforVal(row,col);
             
             for(int i=0; i<row; ++i)
@@ -239,9 +231,7 @@ class matrix {
 
         // initialize using a 2d std::vector 
         matrix(std::vector<std::vector<DATA>> data) {
-            this->row = data.size();
-            this->col = data[0].size();
-            getMemoryforVal(this->row, this->col);
+            getMemoryforVal(data.size(), data[0].size());
 
             for(int i=0; i<this->row; ++i)
                 for(int j=0; j<this->col; ++j)
@@ -250,9 +240,7 @@ class matrix {
 
         //initialize a row vector 1xn using 1d std::vector
         matrix(std::vector<DATA> data) {
-            this->row = 1;
-            this->col = data.size();
-            getMemoryforVal(this->row, this->col);
+            getMemoryforVal(1, data.size());
 
             for(int i=0; i<1; ++i)
                 for(int j=0; j<this->col; ++j)
@@ -261,14 +249,12 @@ class matrix {
 
         //copy constructor
         matrix(const matrix<DATA> &m) {
-            this->row = m.row;
-            this->col = m.col;
-            this->getMemoryforVal(this->row, this->col);
+            this->getMemoryforVal( m.rows(), m.cols());
 
-            #pragma omp parallel for
             for(int i=0; i<this->row; ++i)
                 for(int j=0; j<this->col; ++j)
                     *(val + (this->col)*i + j) = *(m.val + i*m.col + j);
+
         }
 
         //initializer list
@@ -276,9 +262,7 @@ class matrix {
             if(list.size() == 0 || list.begin()->size() == 0)
                 matrix();
             else {
-                this->row = list.size();
-                this->col = list.begin()->size();
-                this->getMemoryforVal(this->row, this->col);
+                this->getMemoryforVal(list.size(), list.begin()->size());
                 
                 int i=0, j=0;
                 for(const auto& ROW : list) {
@@ -291,6 +275,7 @@ class matrix {
                 }
             }
         }
+
 
         // insert/update all the elements in row major form into the internal data structure
         void insertAll(int r=-1, int c=-1);
@@ -307,6 +292,8 @@ class matrix {
         //set `subMatrix` values
         void setSubMatrix(int,int,int,int, const matrix&);
         void setSubMatrix(range,range, const matrix&);
+
+        void iota(int start=int());
 
         ~matrix() {
             if(this->row > 0 && this->col > 0) {
@@ -331,20 +318,24 @@ class matrix {
         DATA& operator()(int, int) const;
 
         //Assignment operator
+        matrix<DATA> &operator=(const matrix<DATA>& m1) {
+            this->changeDims(m1.rows(), m1.cols());
+            this->updateWithArray(m1.val, m1.rows(), m1.cols());
+            return *this;
+        }
         template<typename ATAD>
         matrix<DATA> &operator=(const matrix<ATAD>& m1) {
-            if constexpr(std::is_same_v<ATAD,DATA>)
-                this->updateWithArray(m1.val, m1.rows(), m1.cols());
-            else if constexpr ( std::is_same_v<ATAD,std::complex<DATA>>) {
-                this->changeDims(m1.rows(), m1.cols());
+            this->changeDims(m1.rows(), m1.cols());
+             if constexpr ( std::is_same_v<ATAD,std::complex<DATA>>) {
+                //this->changeDims(m1.rows(), m1.cols());
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = std::real(m1(i,j));
             } else {
-                this->changeDims(m1.rows(), m1.cols());
+                //this->changeDims(m1.rows(), m1.cols());
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
-                    *(val + i*(this->cols()) + j) = static_cast<DATA>(m1(i,j));
+                        *(val + i*(this->cols()) + j) = static_cast<DATA>(m1(i,j));
             }
             return *this;
         }   
@@ -472,7 +463,21 @@ matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
 
 matrix<int> randomUniformInt(int, int, int);
 matrix<int> randomUniformInt(int, int, int, int);
+
 /// Non-member operations declarations end ///
+
+/// IOTA
+template<typename DATA>
+void matrix<DATA>::iota(int start) {
+    if (!std::is_arithmetic<DATA>::value || std::is_same<DATA,bool>::value)
+        throw std::domain_error("matrix should only be arithmetic type.");
+
+    if(this->rows() < 1 || this->cols() < 1)
+    throw std::out_of_range("matrix is an empty matrix. Inflate it with memory first.");
+    
+    for(DATA* itr = this->first; itr != this->last; ++itr)
+        *itr = start++;
+}
 
 /// RESHAPE METHOD DEFINITION
 template<typename DATA>
@@ -1211,9 +1216,9 @@ void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
         throw std::invalid_argument("Bad dimension values.");
 
     this->changeDims(r, c);
-    for(int i=0; i<this->row; ++i)
-        for(int j=0; j<this->col; ++j)
-            *(val + i*(this->col) + j) = *(array + i*(this->col) + j);
+    for(int i=0; i<this->rows(); ++i)
+        for(int j=0; j<this->cols(); ++j)
+            *(val + i*(this->cols()) + j) = *(array + i*(c) + j);
 }
 
 /// Print matrix in ostream
@@ -1667,7 +1672,7 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     
     int i, j, k;
     matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
-    if (m1.rows() >= 100 || m1.cols() >= 100|| m2.cols() >= 100) {
+    if (m1.rows() >= 100 || m1.cols() >= 100 || m2.cols() >= 100) {
         #ifdef _OPENACC
         //std::cout<<"Using OpenACC for parallelization\n";
         #pragma acc parallel loop gang private(i, j, k) present(m1, m2, m)
@@ -1843,7 +1848,6 @@ matrix<double> ltm(int size) {
 matrix<double> tril(int size) {
     return lower_triangle_matrix(size);
 }
-
 /////////
 }//linear namespace
 

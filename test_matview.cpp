@@ -16,7 +16,14 @@ int main() {
     matrixView<double> viewA(A, range(2), range(3));
     viewA.display("viewA:-");
 
+    viewA(1,2)=10.5;
+
+    cout<<"After changing viewA(1,2) = 10.5:-\n";
+    A.display("A:-");
+    viewA.display("viewA:-");
+
     matrix<double> splitA = viewA.cvtToMatrix();
     splitA.display(CHANGE_ID_TO_STRING(splitA));
+
     return 0;
 }

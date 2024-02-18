@@ -254,8 +254,23 @@ class matrix {
             for(int i=0; i<this->row; ++i)
                 for(int j=0; j<this->col; ++j)
                     *(val + (this->col)*i + j) = *(m.val + i*m.col + j);
-
         }
+        //copy constructor for handling different type matrices
+        template<typename ATAD>
+        matrix(const matrix<ATAD>& m) {
+            this->getMemoryforVal(m.rows(), m.cols());
+
+            for (int i = 0; i < this->row; ++i) {
+                for (int j = 0; j < this->col; ++j) {
+                    if constexpr (std::is_same_v<ATAD, std::complex<DATA>>) {
+                        *(val + this->col * i + j) = std::real(m(i, j));
+                    } else if constexpr (!std::is_same_v<DATA, ATAD>) {
+                        *(val + this->col * i + j) = static_cast<DATA>(m(i, j));
+                    }
+                }
+            }
+        }
+
 
         //initializer list
         matrix(std::initializer_list<std::initializer_list<DATA>> list) {
@@ -331,7 +346,7 @@ class matrix {
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = std::real(m1(i,j));
-            } else {
+            } else if constexpr(!std::is_same_v<DATA, ATAD>) {
                 //this->changeDims(m1.rows(), m1.cols());
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
@@ -387,7 +402,7 @@ class matrix {
         bool isSymmetric();
         DATA item();
         bool isComparable(const matrix<DATA>&) const;
-
+        bool isMatMulDefined(const matrix<DATA>&) const;
         /// FILE OPERATIONS I/O
         bool saveMatrix(const std::string&);
         bool loadMatrix(const std::string&);
@@ -887,6 +902,12 @@ bool matrix<DATA>::isComparable(const matrix<DATA>& m) const {
     if(this->rows() == m.rows() && this->cols() == m.cols()) {
         return true;
     }
+    return false;
+}
+template<typename DATA>
+bool matrix<DATA>::isMatMulDefined(const matrix<DATA>& m) const {
+    if(this->cols() == m.rows())
+        return true;
     return false;
 }
 
@@ -1551,7 +1572,7 @@ template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     // element-wise multiplication 
     // NOT MATRIX MULTIPLICATION
-    if(!(m1->isComparable(m2))) {
+    if(!(m1.isComparable(m2))) {
         throw std::invalid_argument("Corresponding dimensions do not match for element-wise multiplication.");
     }
     matrix<DATA> product(m1.rows(), m1.cols(), (DATA)1);

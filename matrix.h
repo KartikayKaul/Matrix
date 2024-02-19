@@ -325,8 +325,10 @@ class matrix {
         matrix<DATA> &operator+=(const DATA);
         matrix<DATA> &operator-=(matrix const& );
         matrix<DATA> &operator-=(const DATA);
-        matrix<DATA> &operator*=(const DATA);
-        matrix<DATA> &operator/=(const DATA);
+        template<typename ATAD>
+        matrix<DATA> &operator*=(const ATAD);
+        template<typename ATAD>
+        matrix<DATA> &operator/=(const ATAD);
     
         // Index operator
         DATA& operator()(int, int); //access an element of the matrix
@@ -1509,15 +1511,29 @@ matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
 }
 
 template<typename DATA>
-matrix<DATA> &matrix<DATA>::operator*=(const DATA value) {
+template<typename ATAD>
+matrix<DATA> &matrix<DATA>::operator*=(const ATAD value) {
+    DATA newVal;
+    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+        newVal = static_cast<DATA>(std::real(value));
+    } else {
+        newVal = static_cast<DATA>(value);
+    }
     for(int i=0; i < row*col; ++i)
-        *(val + i) *= value;
+        *(val + i) *= newVal;
     return *this;
 }
 template<typename DATA>
-matrix<DATA> &matrix<DATA>::operator/=(const DATA value) {
+template<typename ATAD>
+matrix<DATA> &matrix<DATA>::operator/=(const ATAD value) {
+    DATA newVal;
+    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+        newVal = static_cast<DATA>(std::real(value));
+    } else {
+        newVal = static_cast<DATA>(value);
+    }
     for(int i=0; i < row*col; ++i)
-        *(val + i) /= value;
+        *(val + i) /= newVal;
     return *this;
 }
 

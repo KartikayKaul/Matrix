@@ -85,5 +85,10 @@ int main(int arg, char *argv[]) {
     
     B3.display("B3:-");
     B4.display("B4:-");
+
+    B4 *= std::complex<double>(2,1);
+
+    B4.display("B4/= 4.5 :-");
+
     return 0;
 }

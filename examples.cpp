@@ -36,8 +36,8 @@ int main() {
     */
 
     // matrix multiplication
-    matrix<int> C = {{3,0},
-                     {2,4}};
+    matrix<int> C = {{3, 0},
+                     {2, 4}};
     matrix<int> D = {{5, -1},
                      {0, -3}};
 
@@ -49,13 +49,15 @@ int main() {
         matrix library performs type-coversion
         for the numerical types.
         But there might be some loss of information
-        while that occurs for a few data types
+        that occurs for a few data types
         especially if you try to feed a complex matrix
-        into a double matrix.
+        into a double matrix it will only supply
+        real values into the new double matrix.
 
         Qualified numerical types:-
             *Integral types
-            * 
+            *fractional types
+            *std::complex
     */
     matrix<double> Product = C&D;
     matrix<double> ELEM;
@@ -70,9 +72,11 @@ int main() {
     cout<<"\nElement-wise Product:-";
     ELEM.display("C*D:-");
 
-    matrix<char> oohlala(5,5, 1);
-    oohlala.iota(65);
-
-    oohlala.display("oohlala");
+    
+    // Some cool manipulations.
+    matrix<char> alphabets(1,26);
+    alphabets.iota(97); //A = 65 and a = 97
+    alphabets.display("alphabets row matrix:-");
+    
     return 0;
 }

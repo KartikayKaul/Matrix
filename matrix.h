@@ -405,9 +405,14 @@ class matrix {
         DATA item();
         bool isComparable(const matrix<DATA>&) const;
         bool isMatMulDefined(const matrix<DATA>&) const;
+        bool all(bool);
+        bool isany(bool);
+
         /// FILE OPERATIONS I/O
         bool saveMatrix(const std::string&);
         bool loadMatrix(const std::string&);
+
+        
 };
 
 //// NON-MEMBER OPERATIONS DECLARATIONS ///
@@ -931,6 +936,34 @@ DATA matrix<DATA>::item() {
     } else {
         throw std::invalid_argument("To throw an item out it is supposed to be 1x1 matrix.");
     }
+}
+
+template<typename DATA>
+ bool matrix<DATA>::all(bool value) {
+    static_assert(std::is_same_v<DATA,bool>, "all() is only supported for boolean matrices.");
+    
+    for(int i=0; i<this->rows(); ++i) {
+        for(int j=0; j<this->cols(); ++j) {
+            if(value != *(val + i*(this->cols()) + j)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+template<typename DATA>
+bool matrix<DATA>::isany(bool value) {
+    static_assert(std::is_same_v<DATA,bool>, "isany() is only supported for boolean matrices.");
+    
+    for(int i=0; i<this->rows(); ++i) {
+        for(int j=0; j<this->cols(); ++j) {
+            if(value == *(val + i*(this->cols()) + j)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /// STACKING OPERATIONS
@@ -1603,6 +1636,8 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     if(!m1.isComparable(m2))
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols(), true);
+
+    #pragma omp parallel for
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
             if(m1(i,j) != m2(i,j))
@@ -1621,6 +1656,8 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
+
+    #pragma omp parallel for
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
             if(m1(i,j) != tval)
@@ -1757,15 +1794,13 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         int rowsA = A.rows();
         int colsA = A.cols();
         int colsB = B.cols();
-        // //std::cout<<rowsA<<" "<<colsA<<" "<<colsB;
         matrix<double> result(rowsA, colsB);
         
-        #pragma omp parallel for
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
                 __m128d sum = _mm_setzero_pd();  // Initialize sum vector with zeros
                 
-                for (int k = 0; k < colsA; ++k) {
+                for (int k = 0; k < colsA; k+=4) {
                     // Load 2 elements from the current row of matrix A and 2 elements from the current column of matrix B
                     __m128d a = _mm_loadu_pd(&A(i, k));
                     __m128d b = _mm_loadu_pd(&B(k, j));

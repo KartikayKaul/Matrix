@@ -28,31 +28,27 @@ int main(int arg, char *argv[]) {
     cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING";
     auto start = high_resolution_clock::now();
     matrix<double> C = A&B;
-    //C.display("C:-");
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 
 
-    // //benchmarking matrix mul SIMD
-    // cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
-    // auto start1 = high_resolution_clock::now();
-    // matrix<double> D = matmul_simd(A,B);
-    // //C.display("C:-");
-    // auto end1 = high_resolution_clock::now();
-    // auto duration1 = duration_cast<milliseconds>(end1-start1);
+    //benchmarking matrix mul SIMD
+    cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
+    auto start1 = high_resolution_clock::now();
+    matrix<double> D = matmul_simd(A,B);
+    auto end1 = high_resolution_clock::now();
+    auto duration1 = duration_cast<milliseconds>(end1-start1);
 
     //benchmarking matrix mul SIMD
     cout<<"\n\n STRASSEN'S MATRIX MUL BENCHMARKING\n";
     auto start2 = high_resolution_clock::now();
     matrix<double> E = strassen_multiply(A,B);
-    //C.display("C:-");
     auto end2 = high_resolution_clock::now();
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 
     cout<<"\n\n====Benchmark Results====\n";
     cout<<"(Matrix Multiplication) || Time taken: "<<duration.count() <<" milliseconds\n";
-
-    //cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
+    cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
 

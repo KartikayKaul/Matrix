@@ -331,8 +331,8 @@ class matrix {
         matrix<DATA> &operator/=(const ATAD);
     
         // Index operator
-        DATA& operator()(int, int); //access an element of the matrix
-        DATA& operator()(int, int) const;
+        DATA& operator()(const int, const int); //access an element of the matrix
+        const DATA& operator()(const int, const int) const;
 
         //Assignment operator
         matrix<DATA> &operator=(const matrix<DATA>& m1) {
@@ -1099,15 +1099,15 @@ matrix<DATA> matrix<DATA>::operator^(int power) {
 
 /// INDEX OPERATION
 template<typename DATA>
-DATA& matrix<DATA>::operator()(int r, int c)  {
-    if(r >= 0 && r < this->rows()  && c >= 0 && c < this->cols()) {
+DATA& matrix<DATA>::operator()(const int r,const int c)  {
+    if (r >= 0 && r < this->rows()  && c >= 0 && c < this->cols()) {
         return *(val + r*this->col + c);
     } else {
         throw std::invalid_argument("Indices exceed the dimension size.");
     }
 }
 template<typename DATA>
-DATA& matrix<DATA>::operator()(int r, int c) const {
+const DATA& matrix<DATA>::operator()(const int r, const int c) const {
     if(r >= 0 && r < this->rows()  && c >= 0 && c < this->cols()) {
         return *(val + r*this->col + c);
     } else {
@@ -1514,7 +1514,7 @@ template<typename DATA>
 template<typename ATAD>
 matrix<DATA> &matrix<DATA>::operator*=(const ATAD value) {
     DATA newVal;
-    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+    if constexpr(std::is_same_v<ATAD, std::complex<DATA>>) {
         newVal = static_cast<DATA>(std::real(value));
     } else {
         newVal = static_cast<DATA>(value);
@@ -1527,7 +1527,7 @@ template<typename DATA>
 template<typename ATAD>
 matrix<DATA> &matrix<DATA>::operator/=(const ATAD value) {
     DATA newVal;
-    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+    if constexpr(std::is_same_v<ATAD, std::complex<DATA>>) {
         newVal = static_cast<DATA>(std::real(value));
     } else {
         newVal = static_cast<DATA>(value);
@@ -1557,7 +1557,7 @@ matrix<DATA> &matrix<DATA>::operator-=(const DATA value) {
 template<typename DATA, typename ATAD>
 matrix<DATA> operator/(const matrix<DATA>& m1, const ATAD value) {
     matrix<DATA> result = m1;
-    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+    if constexpr(std::is_same_v<ATAD, std::complex<DATA>>) {
         result /= static_cast<DATA>(std::real(value));
     } else {
         result /= static_cast<DATA>(value);
@@ -1572,7 +1572,7 @@ matrix<DATA> operator/(const ATAD val, const matrix<DATA>& m1) {
 template<typename DATA, typename ATAD>
 matrix<DATA> operator*(const matrix<DATA>& m1, const ATAD value) {
     matrix<DATA> result = m1;
-    if constexpr(std::is_same_v<ATAD, std::complex<double>>) {
+    if constexpr(std::is_same_v<ATAD, std::complex<DATA>>) {
         result *= static_cast<DATA>(std::real(value));
     } else {
         result *= static_cast<DATA>(value);
@@ -1601,7 +1601,7 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 template<typename DATA>
 matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     if(!m1.isComparable(m2))
-        throw std::domain_error("corresponding dimensions must match");
+        throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols(), true);
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)

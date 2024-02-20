@@ -75,8 +75,10 @@ int main() {
     
     // Some cool manipulations.
     matrix<char> alphabets(1,26);
-    alphabets.iota(97); //A = 65 and a = 97
+    alphabets.iota(65); //A = 65 and a = 97
     alphabets.display("alphabets row matrix:-");
-    
+
+    alphabets /= 1.5;
+    alphabets.display("alphabets /= 1.5:-");
     return 0;
 }

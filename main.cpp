@@ -90,5 +90,7 @@ int main(int arg, char *argv[]) {
 
     B4.display("B4/= 4.5 :-");
 
+    B4(range(1), range(3)).display("B4.slice(0,1,0,3):-");
+
     return 0;
 }

@@ -51,42 +51,41 @@ int main(int arg, char *argv[]) {
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
+   
+    // // type conversion handling
+    // std::complex<double> value(5.2,1.5);
+    // matrix<std::complex<double>> X(2,3,value);
+    // matrix<double> Y;
+    // Y = X.reshape(1,6);
+    // X.display("X:-");
+    // Y.display("Y:-");
 
+    // std::complex<double> value1(1.5, 0.5);
+    // matrix<std::complex<double>> G = {{value1},{value1}};
+    // G.display();
 
-    // type conversion handling
-    std::complex<double> value(5.2,1.5);
-    matrix<std::complex<double>> X(2,3,value);
-    matrix<double> Y;
-    Y = X.reshape(1,6);
-    X.display("X:-");
-    Y.display("Y:-");
+    // matrix<double> B1 = {{1, 2, 3}};
+    // (B1.T()&B1).display("B1' * B1 = ");
 
-    std::complex<double> value1(1.5, 0.5);
-    matrix<std::complex<double>> G = {{value1},{value1}};
-    G.display();
+    // matrix<double> B2(4);
+    // B2.iota(-5);
 
-    matrix<double> B1 = {{1, 2, 3}};
-    (B1.T()&B1).display("B1' * B1 = ");
+    // B2.display("B2:-");
 
-    matrix<double> B2(4);
-    B2.iota(-5);
-
-    B2.display("B2:-");
-
-    matrix<double> B3(1,15,2);
-    B3.display("aha");
-    B3.iota();
-    matrix<double> B4;
-    B4 = B3.reshape(3,5);
+    // matrix<double> B3(1,15,2);
+    // B3.display("aha");
+    // B3.iota();
+    // matrix<double> B4;
+    // B4 = B3.reshape(3,5);
     
-    B3.display("B3:-");
-    B4.display("B4:-");
+    // B3.display("B3:-");
+    // B4.display("B4:-");
 
-    B4 *= std::complex<double>(2,1);
+    // B4 *= std::complex<double>(2,1);
 
-    B4.display("B4/= 4.5 :-");
+    // B4.display("B4/= 4.5 :-");
 
-    B4(range(1), range(3)).display("B4.slice(0,1,0,3):-");
+    // B4(range(1), range(3)).display("B4.slice(0,1,0,3):-");
 
     return 0;
 }

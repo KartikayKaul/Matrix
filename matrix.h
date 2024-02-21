@@ -24,6 +24,8 @@ namespace linear{
 #define deAlloc(x) delete[] x; x = NULL;
 
 #define MATRIX_PRECISION 4
+#define MATRIX_PRECISION_TOL 6
+#define PRECISION_TOL(type) std::numeric_limits<type>::epsilon() * std::pow(10, MATRIX_PRECISION_TOL)
 
 //path macros
 #define SAVEPATH "matrixSaves/"
@@ -1213,8 +1215,8 @@ void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix
     bool validation1 = (this->validateParams(x_0, y_0, n)) && (this->validateParams(x_1, y_1, m));
     //bool validation2 = !((y_0 - x_0  != n) || (y_1 - x_1 != m)); 
     if (validation1) {
-        for (int i = x_0; i <= y_0; ++i) {
-            for (int j = x_1; j <= y_1; ++j) {
+        for (int i = x_0; i < y_0; ++i) {
+            for (int j = x_1; j < y_1; ++j) {
                 (*this)(i, j) = subMatrix(i - x_0, j - x_1);
             }
         }
@@ -1640,7 +1642,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     #pragma omp parallel for
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
-            if(m1(i,j) != m2(i,j))
+            if(std::abs(m1(i,j) - m2(i,j)) > PRECISION_TOL(DATA) )
                 res(i,j) = false;
     return res;
 }
@@ -1660,7 +1662,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     #pragma omp parallel for
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
-            if(m1(i,j) != tval)
+            if(std::abs(m1(i,j) - tval) > PRECISION_TOL(DATA))
                 res(i,j) = false;
         }    
     return res;
@@ -1721,7 +1723,7 @@ matrix<DATA> operator-(const matrix<DATA>& m1, const matrix<DATA>& m2){
         throw std::invalid_argument("corresponding dimensions do not match for subtraction.");
     }
     matrix<DATA> m = m1;
-    m += m2;
+    m -= m2;
     return m;
 }
 template<typename DATA>
@@ -1824,12 +1826,11 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
 template<typename DATA>
 matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=512) {
     int n = A.rows();
-
     if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
         throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
     }
-
-    if (n <= base_case_cutoff) {
+    
+    if (n < base_case_cutoff) {
         return matmul(A,B);
     }
 
@@ -1863,10 +1864,10 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
 
     // Combine the submatrices to get the final result
     matrix<DATA> result(n, n);
-    result.setSubMatrix(0, newSize-1, 0, newSize-1, C11);
-    result.setSubMatrix(0, newSize-1, newSize, n-1, C12);
-    result.setSubMatrix(newSize, n-1, 0, newSize-1, C21);
-    result.setSubMatrix(newSize, n-1, newSize, n-1, C22);
+    result.setSubMatrix(0, newSize, 0, newSize, C11);
+    result.setSubMatrix(0, newSize, newSize, n, C12);
+    result.setSubMatrix(newSize, n, 0, newSize, C21);
+    result.setSubMatrix(newSize, n, newSize, n, C22);
 
     return result;
 }

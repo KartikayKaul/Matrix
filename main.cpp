@@ -51,7 +51,15 @@ int main(int arg, char *argv[]) {
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
-   
+
+    cout<<"matmul result == simd result? ";
+    (C==D).all(true)? cout<<"true\n":cout<<"false\n";
+
+    cout<<"matmul result == strassen result? ";
+    (C==E).all(true) ? cout<<"true\n":cout<<"false\n";
+    
+    cout<<"simd result == strassen result? ";
+    (D==E).all(true) ? cout<<"true\n":cout<<"false\n";
     // // type conversion handling
     // std::complex<double> value(5.2,1.5);
     // matrix<std::complex<double>> X(2,3,value);

@@ -47,7 +47,7 @@ int main(int arg, char *argv[]) {
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 
     cout<<"\n\n====Benchmark Results====\n";
-    cout<<"(Matrix Multiplication) || Time taken: "<<duration.count() <<" milliseconds\n";
+           
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
@@ -60,6 +60,21 @@ int main(int arg, char *argv[]) {
     
     cout<<"simd result == strassen result? ";
     (D==E).all(true) ? cout<<"true\n":cout<<"false\n";
+
+
+    matrix<double> oowee(3,3,0.);
+    oowee.display("OOWEE:-");
+    oowee.fillUpperTriangle(4);
+    oowee.display("OOWEE OOWEE:-");
+    (is_triangular(oowee)) ? cout<<"Owee oowee! It is triangular.\n":cout<<"Noo.\n";
+    oowee.fillLowerTriangle(69);
+    oowee.display("OOWEE OOWEE CUPCAKKE!:-");
+
+    matrix<int> ana(3,3,2);
+    matrix<int> lana(3,3,2);
+    (!(ana==lana)).display("ana!=lana:-");
+
+    // oowee.display("OOWEE OOWEE:-");
     // // type conversion handling
     // std::complex<double> value(5.2,1.5);
     // matrix<std::complex<double>> X(2,3,value);
@@ -93,7 +108,15 @@ int main(int arg, char *argv[]) {
 
     // B4.display("B4/= 4.5 :-");
 
-    // B4(range(1), range(3)).display("B4.slice(0,1,0,3):-");
+    // matrix<double> C1 = {{1},{2},{0},{3},{4}};
+    // C1.display("C1:-");
+    // C1.getDims().display("dims(C1):-");
+    
+    // double dotproduct = (C1.T()&C1).item();
+    // cout<<"\n\ninner product of C1 with itself:- "<<dotproduct<<endl;
+
+    // matrix<double> I3 = eye<double>(3);
+    // I3.display("I_3x3:-");
 
     return 0;
 }

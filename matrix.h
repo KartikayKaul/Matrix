@@ -136,10 +136,19 @@ class matrix {
 
     public:
          //// EXPERIMENTAL FUNCTIONS ////
+         //First and Last accessors
+         DATA*  begin() const {
+            return this->first;
+         }
+         DATA* end() const {
+            return this->last;
+         }
+
         // get total memory of the data
         int getTotalMemory() const {
             return sizeof(DATA) * (last - first);
         }
+        
         //swap matrices contents
         void swapValues(matrix<DATA>& other) {
             if(other.rows() != this->rows() || other.cols() != this->cols()) {
@@ -147,6 +156,36 @@ class matrix {
             }
             std::swap_ranges(this->first, this->last, other.first);
         }
+
+        void fillUpperTriangle(DATA value)
+         {
+            int Rows = this->rows();
+            int Cols = this->cols();
+
+            for(DATA *i = this->first; i!= this->last; ++i) {
+                int rowIdx = (i - first) / Cols;
+                int colIdx = (i - first) % Cols;
+                if(colIdx > rowIdx)
+                    *i = value;
+            }
+         }
+         void fillTriu(DATA value) {
+            this->fillUpperTriangle(value);
+         }
+         void fillLowerTriangle(DATA value) {
+            int Rows = this->rows();
+            int Cols = this->cols();
+
+            for(DATA *i = this->first; i!= this->last; ++i) {
+                int rowIdx = (i - first) / Cols;
+                int colIdx = (i - first) % Cols;
+                if(colIdx < rowIdx)
+                    *i = value;
+            }
+         }
+         void fillTril(DATA value) {
+            this->fillLowerTriangle(value);
+         }
         //// EXPERIMENTAL ENDS ////
 
         // Getting matrix dimensions
@@ -176,7 +215,6 @@ class matrix {
                 Reshape function does not delete the values 
                 of original matrix. Infact it creates a new 
                 matrix which it returns.
-                
             */
            this->delMemoryforVal();
            this->getMemoryforVal(r, c);
@@ -364,7 +402,7 @@ class matrix {
         matrix<DATA> reshape(int newRow, int newCol);
 
         // Transpose operation
-        matrix<DATA> operator!(); 
+        matrix<DATA> operator~();
         matrix<DATA> transpose();
         matrix<DATA> T(){ return this->transpose();}
 
@@ -419,6 +457,7 @@ class matrix {
 };
 
 //// NON-MEMBER OPERATIONS DECLARATIONS ///
+matrix<bool> operator!(const matrix<bool>&);
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA>
@@ -448,9 +487,6 @@ matrix<bool> operator==(const matrix<DATA>&, const ATAD);
 template<typename DATA, typename ATAD,\
          typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const ATAD,const matrix<DATA>&);
-
-template<typename DATA>
-bool operator!=(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA, typename ATAD>
 matrix<DATA> operator/(const matrix<DATA>&, const ATAD);
@@ -1233,7 +1269,7 @@ void matrix<DATA>::setSubMatrix(range rowRng, range colRng, const matrix<DATA>& 
 
 /// TRANSPOSE OPERATION
 template<typename DATA>
-matrix<DATA> matrix<DATA>::operator!() {
+matrix<DATA> matrix<DATA>::operator~() {
     matrix<DATA> m(this->col, this->row);
 
     //using insertAt operation to fill in the elements
@@ -1246,7 +1282,7 @@ matrix<DATA> matrix<DATA>::operator!() {
 /// TRANSPOSE OPERATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::transpose() {
-    matrix m = !(*this);
+    matrix m = ~(*this);
     return m;
 }
 
@@ -1546,6 +1582,17 @@ matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
     return mat;
 }
 
+matrix<bool> operator!(const matrix<bool> &m) {
+    matrix<bool> result(m.rows(), m.cols());
+
+    auto itRez = result.begin();
+    for(auto it = m.begin(); it != m.end(); ++it, ++itRez) {
+        *itRez = !(*it);
+    }
+
+    return result;
+}
+
 template<typename DATA>
 template<typename ATAD>
 matrix<DATA> &matrix<DATA>::operator*=(const ATAD value) {
@@ -1647,7 +1694,6 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
                 res(i,j) = false;
     return res;
 }
-
 template<typename DATA, typename ATAD,\
 typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
@@ -1659,7 +1705,6 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-
     #pragma omp parallel for
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
@@ -1668,7 +1713,6 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
         }    
     return res;
 }
-
 template<typename DATA, typename ATAD,\
 typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const ATAD value, const matrix<DATA>& m1) {
@@ -1819,8 +1863,8 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         }
         return result;
     #else
-        matrix<double> result(A.rows(), B.cols(), 0.); 
-        throw std::runtime_error<("AVX instructions never compiled. See if you used `-mavx` flag.");
+        //matrix<double> result(A.rows(), B.cols(), 0.); 
+        throw std::runtime_error("matmul_simd() - AVX instructions never compiled. See if you used `-mavx` flag.");
     #endif
 }
 

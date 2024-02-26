@@ -3,7 +3,7 @@
 #define MATRIX_H
 
 #include<iostream>
-#include<omp.h> // for matrix multiplication speedup.'
+#include<omp.h> // for matrix multiplication speedup.
 #include<openacc.h>
 #include<stdexcept>
 #include<fstream>
@@ -148,7 +148,7 @@ class matrix {
         int getTotalMemory() const {
             return sizeof(DATA) * (last - first);
         }
-        
+
         //swap matrices contents
         void swapValues(matrix<DATA>& other) {
             if(other.rows() != this->rows() || other.cols() != this->cols()) {
@@ -189,7 +189,7 @@ class matrix {
         //// EXPERIMENTAL ENDS ////
 
         // Getting matrix dimensions
-        matrix<int> getDims() {
+        matrix<int> getDims() const {
             /*
                 Returns a 1x2 integer matrix (say Dims) with row in Dims(0,0) and col in Dims(0,1) 
             */
@@ -223,6 +223,7 @@ class matrix {
         // initialize empty matrix
         matrix() {
             this->row = this->col = 0;
+            this->first = this->last = NULL;
         }
 
         // initialize a square matrix
@@ -343,7 +344,7 @@ class matrix {
         void updateWithArray(DATA*, int, int);
 
         // display contents in a 2d grid form
-        void display(const std::string msg="Matrix:-");
+        void display(const std::string msg="Matrix:-") const;
         
         //set `subMatrix` values
         void setSubMatrix(int,int,int,int, const matrix&);
@@ -374,6 +375,7 @@ class matrix {
         // Index operator
         DATA& operator()(const int, const int); //access an element of the matrix
         const DATA& operator()(const int, const int) const;
+        matrix<DATA> operator()(const matrix<bool>&);
 
         //Assignment operator
         matrix<DATA> &operator=(const matrix<DATA>& m1) {
@@ -1185,8 +1187,30 @@ const DATA& matrix<DATA>::operator()(const int r, const int c) const {
     } else {
         throw std::invalid_argument("Indices exceed the dimension size.");
     }
-
 }
+template<typename DATA>
+matrix<DATA> matrix<DATA>::operator()(const matrix<bool>& m) {
+    if(m.rows() != this->rows() || m.cols() != this->cols())
+        throw std::invalid_argument("the corresponding dimensions do not match.");
+
+    int size=0;
+    for(bool* itr=m.begin(); itr != m.end(); ++itr) {
+        if(*itr)
+            size++;
+    }
+
+    matrix<DATA> result(1,size);
+    int itr=0;
+    for(int i=0; i<this->rows(); ++i){
+        for(int j=0; j<this->cols(); ++j) {
+            if(m(i,j))
+                result(0,itr++) = (*this)(i,j);
+        }
+    }
+
+    return result;
+}
+
 
 /// SLICE OPERATION
 template<typename DATA>
@@ -1318,13 +1342,13 @@ void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
 
 /// Print matrix in ostream
 template<typename DATA>
-void matrix<DATA>::display(const std::string msg)  {
+void matrix<DATA>::display(const std::string msg)  const{
     //experimental code
     int i,j;
     std::cout<<'\n'<<msg<<'\n';
 
     // zero size matrix display
-    if(this->row == 0 || this->col == 0) {
+    if(row == 0 || col == 0) {
         std::cout<<"(empty matrix)\n";
         return;
     }
@@ -1334,18 +1358,18 @@ void matrix<DATA>::display(const std::string msg)  {
     
     // if it is a bool matrix use different logic
     if constexpr(std::is_same_v<DATA,bool>) {
-        for(int i=0; i<this->rows(); i++) {
-            for(int j=0; j<this->cols();j++)
-                std::cout << std::setw(5)<< std::boolalpha << (*(val + (this->col) * i + j)) << " ";
+        for(int i=0; i<rows(); i++) {
+            for(int j=0; j<cols();j++)
+                std::cout << std::setw(5)<< std::boolalpha << (*(val + (col) * i + j)) << " ";
             std::cout<<std::endl;
         }
     } else {
         // Find the maximum number of digits in the matrix
         int maxDigits = 1;
-        for (i = 0; i < this->row; ++i) {
-            for (j = 0; j < this->col; ++j) {
+        for (i = 0; i < rows(); ++i) {
+            for (j = 0; j < cols(); ++j) {
                 std::stringstream stream;
-                stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
+                stream << std::fixed << std::setprecision(max_precision) << *(val + (col) * i + j);
                 std::string str = stream.str();
 
                 size_t pos = str.find_last_not_of('0');
@@ -1357,10 +1381,10 @@ void matrix<DATA>::display(const std::string msg)  {
         }
         // Set the width based on the maximum number of digits
         int width = maxDigits + padding;
-        for (i = 0; i < this->row; ++i) {
-            for (j = 0; j < this->col; ++j) {
+        for (i = 0; i < rows(); ++i) {
+            for (j = 0; j < cols(); ++j) {
                 std::stringstream stream;
-                stream << std::fixed << std::setprecision(max_precision) << *(val + (this->col) * i + j);
+                stream << std::fixed << std::setprecision(max_precision) << *(val + (col) * i + j);
                 std::string str = stream.str();
 
                 size_t pos = str.find_last_not_of('0');

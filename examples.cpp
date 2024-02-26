@@ -80,5 +80,29 @@ int main() {
 
     alphabets /= 1.5;
     alphabets.display("alphabets /= 1.5:-");
+
+    // Check if two matrices are equal
+    matrix<int> market1 = {{1,2,3,5,7,8}};
+    matrix<int> market2 = {{1,2,3,5,7,8}};
+    
+    //returns a bool matrix of size 1x6
+    (market1==market2).display("market1==market2:-");
+
+    //you can also use the queries on bool matrices such as all(value) or isany(value)
+    //trying to see if all the elements are true in the resultant boolean matrix
+    cout<<(((market1==market2).all(true))?"Unit prices in both markets are same.\n":"Unit prices are not same in both markets.\n");
+
+
+    // You can try to use boolean operations (currently only == works. Others are in construction)
+    matrix<double> someData = randomUniformInt(10, 10, 0,5);
+    someData.display("someData:-");
+
+    matrix<double> allOnes = someData(someData==2);
+    allOnes.display("allOnes:-");
+
+    const matrix<int> ouch(2,2,1.5);
+    ouch.display("ouch:-");
+
+    ouch.getDims().display("dims(ouch):-");
     return 0;
 }

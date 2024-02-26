@@ -47,7 +47,7 @@ int main(int arg, char *argv[]) {
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 
     cout<<"\n\n====Benchmark Results====\n";
-           
+    cout<<"(Normal Matrix Mul) || Time taken: "<<duration.count() <<" milliseconds\n";       
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     deAlloc(array);
@@ -73,7 +73,11 @@ int main(int arg, char *argv[]) {
     matrix<int> ana(3,3,2);
     matrix<int> lana(3,3,2);
     (!(ana==lana)).display("ana!=lana:-");
-
+    
+    ana(0,1) = 10;
+    ana(1,2) = 5;
+    ana.display("ana:-");
+    (~ana).display("~ana:-");
     // oowee.display("OOWEE OOWEE:-");
     // // type conversion handling
     // std::complex<double> value(5.2,1.5);

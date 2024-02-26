@@ -490,10 +490,26 @@ template<typename DATA, typename ATAD,\
          typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const ATAD,const matrix<DATA>&);
 
+template<typename DATA>
+matrix<bool> operator<(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA, typename ATAD,\
+         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator<(const matrix<DATA>&, const ATAD);
+template<typename DATA, typename ATAD,\
+         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator<(const ATAD,const matrix<DATA>&);
+
+template<typename DATA>
+matrix<bool> operator>(const matrix<DATA>&, const matrix<DATA>&);
+template<typename DATA, typename ATAD,\
+         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator>(const matrix<DATA>&, const ATAD);
+template<typename DATA, typename ATAD,\
+         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator>(const ATAD,const matrix<DATA>&);
+
 template<typename DATA, typename ATAD>
 matrix<DATA> operator/(const matrix<DATA>&, const ATAD);
-template<typename DATA, typename ATAD>
-matrix<DATA> operator/(const ATAD,const matrix<DATA>&);
 
 template<typename DATA>
 matrix<DATA> operator&(const matrix<DATA>&, const matrix<DATA>&);
@@ -1671,10 +1687,6 @@ matrix<DATA> operator/(const matrix<DATA>& m1, const ATAD value) {
     }
     return result;
 }
-template<typename DATA, typename ATAD>
-matrix<DATA> operator/(const ATAD val, const matrix<DATA>& m1) {
-    return m1 * val;
-}
 
 template<typename DATA, typename ATAD>
 matrix<DATA> operator*(const matrix<DATA>& m1, const ATAD value) {
@@ -1711,7 +1723,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols(), true);
 
-    #pragma omp parallel for
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
             if(std::abs(m1(i,j) - m2(i,j)) > PRECISION_TOL(DATA) )
@@ -1729,7 +1741,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for
+    #pragma omp parallel for if(m1.rows() * m1.cols > 100)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
             if(std::abs(m1(i,j) - tval) > PRECISION_TOL(DATA))
@@ -1744,10 +1756,109 @@ matrix<bool> operator==(const ATAD value, const matrix<DATA>& m1) {
 }
 
 template<typename DATA>
+matrix<bool> operator<(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    if(!m1.isComparable(m2))
+        throw std::domain_error("matrix - corresponding dimensions must match");
+    matrix<bool> res(m1.rows(), m1.cols());
+
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++)
+                res(i,j) = m1(i,j)<m2(i,j);
+    return res;
+}
+template<typename DATA, typename ATAD,\
+typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator<(const matrix<DATA>& m1, const ATAD value) {
+    matrix<bool> res(m1.rows(), m1.cols());
+    DATA tval;
+
+    if constexpr(!std::is_same_v<DATA,ATAD>) {
+            tval = static_cast<DATA>(value);
+    } else {
+        tval = value;
+    }
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100) 
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++) {
+                res(i,j) = m1(i,j) < tval;
+        }    
+    return res;
+}
+template<typename DATA, typename ATAD,\
+typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator<(const ATAD value, const matrix<DATA>& m1) {
+    matrix<bool> res(m1.rows(), m1.cols());
+    DATA tval;
+
+    if constexpr(!std::is_same_v<DATA,ATAD>) {
+            tval = static_cast<DATA>(value);
+    } else {
+        tval = value;
+    }
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++) {
+                res(i,j) = m1(i,j) > tval;
+        }    
+    return res;
+}
+
+template<typename DATA>
+matrix<bool> operator>(const matrix<DATA>& m1, const matrix<DATA>& m2) {
+    if(!m1.isComparable(m2))
+        throw std::domain_error("matrix - corresponding dimensions must match");
+    matrix<bool> res(m1.rows(), m1.cols());
+
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++)
+                res(i,j) = m1(i,j)>m2(i,j);
+    return res;
+}
+template<typename DATA, typename ATAD,\
+typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator>(const matrix<DATA>& m1, const ATAD value) {
+    matrix<bool> res(m1.rows(), m1.cols());
+    DATA tval;
+
+    if constexpr(!std::is_same_v<DATA,ATAD>) {
+            tval = static_cast<DATA>(value);
+    } else {
+        tval = value;
+    }
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100) 
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++) {
+                res(i,j) = m1(i,j) > tval;
+        }    
+    return res;
+}
+template<typename DATA, typename ATAD,\
+typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<bool> operator>(const ATAD value, const matrix<DATA>& m1) {
+    matrix<bool> res(m1.rows(), m1.cols());
+    DATA tval;
+
+    if constexpr(!std::is_same_v<DATA,ATAD>) {
+            tval = static_cast<DATA>(value);
+    } else {
+        tval = value;
+    }
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    for(int i=0; i<m1.rows(); i++)
+        for(int j=0; j<m1.cols(); j++) {
+                res(i,j) = m1(i,j) < tval;
+        }    
+    return res;
+}
+
+template<typename DATA>
 matrix<DATA> &matrix<DATA>::operator+=(const matrix<DATA>& m1) {
     if(!this->isComparable(m1))
         throw std::invalid_argument("Dimensions do not match.");
     else {
+        #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
         for(int i=0; i<this->rows()*this->cols(); ++i)
             *(val + i) += m1(i/m1.cols(), i%m1.cols());
     }

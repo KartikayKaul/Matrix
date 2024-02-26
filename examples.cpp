@@ -1,6 +1,7 @@
 #include<iostream>
 
 #include "matrix.h"
+#include "matview.h"
 
 using namespace std;
 using namespace linear;
@@ -96,13 +97,10 @@ int main() {
     // You can try to use boolean operations (currently only == works. Others are in construction)
     matrix<double> someData = randomUniformInt(10, 10, 0,5);
     someData.display("someData:-");
-
-    matrix<double> allOnes = someData(someData==2);
-    allOnes.display("allOnes:-");
-
-    const matrix<int> ouch(2,2,1.5);
-    ouch.display("ouch:-");
-
-    ouch.getDims().display("dims(ouch):-");
+    matrix<bool> moreThan2 = someData>2;
+    moreThan2.display("lessThan2:-");
+    matrix<double> moreThan2Data = someData(moreThan2);
+    moreThan2Data.display("lessThan2Data:-");
+    moreThan2Data.getDims().display();
     return 0;
 }

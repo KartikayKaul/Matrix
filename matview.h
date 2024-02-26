@@ -3,6 +3,14 @@
 #define MATRIX_VIEW_H
 
 #include "matrix.h"
+/*
+Convention is to define a matrixView after the matrix has been defined.
+If a matrix's scope is complete and matrixView of that matrix still
+exists, it will likely invoke an error or invite unwanted behaviour 
+in the program.
+Finding ways to implement the 'view of a matrix' concept while keeping
+tab on the original matrix's scope.
+*/
 
 namespace linear{
 template<typename DATA>
@@ -34,7 +42,6 @@ class matrixView {
     void display(const std::string msg=":-");
     matrix<DATA> cvtToMatrix();
 };
-
 
 template<typename DATA>
 matrix<DATA> matrixView<DATA>::cvtToMatrix() {

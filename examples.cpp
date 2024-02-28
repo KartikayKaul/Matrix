@@ -79,8 +79,8 @@ int main() {
     alphabets.iota(65); //A = 65 and a = 97
     alphabets.display("alphabets row matrix:-");
 
-    alphabets /= 1.5;
-    alphabets.display("alphabets /= 1.5:-");
+    alphabets /= 2;
+    alphabets.display("alphabets /= 2:-");
 
     // Check if two matrices are equal
     matrix<int> market1 = {{1,2,3,5,7,8}};
@@ -94,13 +94,21 @@ int main() {
     cout<<(((market1==market2).all(true))?"Unit prices in both markets are same.\n":"Unit prices are not same in both markets.\n");
 
 
-    // You can try to use boolean operations (currently only == works. Others are in construction)
-    matrix<double> someData = randomUniformInt(10, 10, 0,5);
+    // You can try to use boolean operations
+    matrix<double> someData = randomUniformInt(10, 10, -10,10);
     someData.display("someData:-");
-    matrix<bool> moreThan2 = someData>2;
+    matrix<bool> moreThan2 = 2<someData;
     moreThan2.display("lessThan2:-");
     matrix<double> moreThan2Data = someData(moreThan2);
-    moreThan2Data.display("lessThan2Data:-");
+    matrix<double> lessThan2Data = someData(someData<=2);
+    moreThan2Data.display("moreThan2Data:-");
+    lessThan2Data.display("lessThan2Data:-");
     moreThan2Data.getDims().display();
+    //In case of trying to attempt != you can simply do !(A==B)
+
+
+    vector<vector<double>> vecData = someData.toVector();
+    
+
     return 0;
 }

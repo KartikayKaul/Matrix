@@ -94,6 +94,9 @@ class matrix {
 
     // memory allocation for internal data structure holding the values
     void getMemoryforVal(int r, int c) {
+        if(r<1 || c<1)
+            throw std::invalid_argument("getMemoryforVal() - invalid dimension values.");
+            
         try {
             this->val = new DATA[r*c];
             
@@ -137,7 +140,7 @@ class matrix {
     public:
          //// EXPERIMENTAL FUNCTIONS ////
          //First and Last accessors
-         DATA*  begin() const {
+         DATA* begin() const {
             return this->first;
          }
          DATA* end() const {
@@ -145,8 +148,8 @@ class matrix {
          }
 
         // get total memory of the data
-        int getTotalMemory() const {
-            return sizeof(DATA) * (last - first);
+        size_t getTotalMemory() const {
+            return sizeof(DATA) * static_cast<size_t>(last - first);
         }
 
         //swap matrices contents
@@ -2236,7 +2239,20 @@ void init2dArray(DATA *array, int size_0, int size_1) {
    std::cout<<"\nPlease insert "<<size_0*size_1<<" values in row major form for a "<<size_0<<'x'<<size_1<<" matrix:-\n";
     for(int i=0; i<size_0; ++i)
         for(int j=0; j<size_1; ++j)
-            std::cin>>*(array + i*size_1 + j);
+                std::cin>>*(array + i*size_1 + j);
+}
+
+template<typename DATA>
+void init2dArray(std::complex<DATA> *array, int size_0, int size_1) {
+    std::cout<<"\nPlease insert "<<size_0*size_1<<" complex values in row major form for a "<<size_0<<'x'<<size_1<<" matrix:-\n";
+    for(int i=0; i<size_0; ++i)
+        for(int j=0; j<size_1; ++j) {
+                DATA real, img;
+                std::cout<<"\n\nenter real: "; std::cin>>real;
+                std::cout<<"enter imag: "; std::cin>>img;
+                std::complex<DATA> elem(real,img);
+                *(array +i*size_1 + j) = elem;
+        }
 }
 
 void init2dRandArray(int *array, int size_0, int size_1, int start=0, int end=9) {

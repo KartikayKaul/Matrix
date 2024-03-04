@@ -109,6 +109,14 @@ int main() {
 
     vector<vector<double>> vecData = someData.toVector();
     
+    int n=2;
+    std::complex<double> *array = new std::complex<double>[n*n];
+    init2dArray<double>(array, n, n);
+    matrix<std::complex<double>> complexMatrix(array, n, n);
+    complexMatrix.display("complex matrix:-");
+    deAlloc(array);
 
+    cout<<"\nMemory consumed by complex matrix = "<<complexMatrix.getTotalMemory()<<endl;
+    
     return 0;
 }

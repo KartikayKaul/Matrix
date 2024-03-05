@@ -541,6 +541,8 @@ matrix<DATA> eye(int);
 
 template<typename DATA>
 matrix<DATA> diagonal(int, DATA);
+template<typename DATA>
+matrix<DATA> diag(const matrix<DATA>&, int shift=0);
 
 matrix<double> upper_triangle_matrix(int);
 matrix<double> lower_triangle_matrix(int);
@@ -1511,18 +1513,35 @@ bool matrix<DATA>::loadMatrix(const std::string& filename) {
 // Diagonal Matrix generator : one single value
 template<typename DATA>
 matrix<DATA> diagonal(int n, DATA value) {
-    matrix<DATA> m(n);
+    matrix<DATA> m(n,n,0);
     
     for(int i=0; i<n; ++i)
         for(int j=0; j<n; ++j)
             {
                 if(i==j)
                     m.insertAt(value, i, j);
-                else
-                    m.insertAt(0, i, j);
             }
     return m;
 }
+//diagonam matrix generator : using a vector matrix
+template<typename DATA>
+matrix<DATA> diag(const matrix<DATA> &m1, int shift) {
+    if(m1.cols() != 1)
+        throw std::invalid_argument("diagonal() - Input matrix is not a vector.");
+    
+    int abs_shift = ((shift<0)?-shift:shift);
+    int n = m1.rows() + abs_shift;
+    matrix<DATA> m(n, n, 0.);
+    for(int i=0; i<m1.rows(); ++i) {
+        if(shift<0) {
+            m(i+abs_shift,i) = m1(i,0);
+        } else {
+            m(i,i+abs_shift) = m1(i,0);
+        }
+    }
+    return m;
+}
+
 
 // Identity matrix of size n
 template<typename DATA>
@@ -2079,6 +2098,7 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
             for(k=0; k<m2.rows(); ++k)
                 for(j=0; j<m2.cols(); ++j)
                     m(i,j) += m1(i,k) * m2(k,j);
+        
         return m;
     }
 } 

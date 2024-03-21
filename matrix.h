@@ -594,7 +594,7 @@ void matrix<DATA>::iota(int start) {
         throw std::domain_error("matrix should only be arithmetic type.");
 
     if(this->rows() < 1 || this->cols() < 1)
-    throw std::out_of_range("matrix is an empty matrix. Inflate it with memory first.");
+        throw std::out_of_range("matrix is an empty matrix. Inflate it with memory first.");
     
     for(DATA* itr = this->first; itr != this->last; ++itr)
         *itr = start++;
@@ -1800,7 +1800,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() * m1.cols > 100)
+    #pragma omp parallel for if(m1.rows() * m1.cols() > 100)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
             if(std::abs(m1(i,j) - tval) > PRECISION_TOL(DATA))

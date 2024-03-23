@@ -2169,7 +2169,7 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
 
 // Strassen's algorithm for multiplying square matrices
 template<typename DATA>
-matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=512) {
+matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=64) {
     int n = A.rows();
     if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
         throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
@@ -2192,14 +2192,82 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     matrix<DATA> B21 = B.slice(newSize, n, 0, newSize);
     matrix<DATA> B22 = B.slice(newSize, n, newSize, n);
 
+    
     // Recursive calls
-    matrix<DATA> P1 = strassen_multiply(A11 + A22, B11 + B22);
+    matrix<DATA> P1 = strassen_multiply(A11 + A22, B11 + B22); 
     matrix<DATA> P2 = strassen_multiply(A21 + A22, B11);
     matrix<DATA> P3 = strassen_multiply(A11, B12 - B22);
     matrix<DATA> P4 = strassen_multiply(A22, B21 - B11);
     matrix<DATA> P5 = strassen_multiply(A11 + A12, B22);
     matrix<DATA> P6 = strassen_multiply(A21 - A11, B11 + B12);
-    matrix<DATA> P7 = strassen_multiply(A12 - A22, B21 + B22);
+    matrix<DATA>P7 = strassen_multiply(A12 - A22, B21 + B22);
+    
+    // Calculate the submatrices of the result
+    matrix<DATA> C11 = P1 + P4 - P5 + P7;
+    matrix<DATA> C12 = P3 + P5;
+    matrix<DATA> C21 = P2 + P4;
+    matrix<DATA> C22 = P1 - P2 + P3 + P6;
+
+    // Combine the submatrices to get the final result
+    matrix<DATA> result(n, n);
+    result.setSubMatrix(0, newSize, 0, newSize, C11);
+    result.setSubMatrix(0, newSize, newSize, n, C12);
+    result.setSubMatrix(newSize, n, 0, newSize, C21);
+    result.setSubMatrix(newSize, n, newSize, n, C22);
+
+    return result;
+}
+
+// Parallelized Strassen's algorithm for multiplying square matrices
+template<typename DATA>
+matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=64) {
+    int n = A.rows();
+    if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
+        throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
+    }
+    
+    if (n < base_case_cutoff) {
+        return matmul(A,B);
+    }
+
+    int newSize = n / 2;
+
+    // Partition matrices
+    matrix<DATA> A11 = A.slice(0, newSize, 0, newSize);
+    matrix<DATA> A12 = A.slice(0, newSize, newSize, n);
+    matrix<DATA> A21 = A.slice(newSize, n, 0, newSize);
+    matrix<DATA> A22 = A.slice(newSize, n, newSize, n);
+
+    matrix<DATA> B11 = B.slice(0, newSize, 0, newSize);
+    matrix<DATA> B12 = B.slice(0, newSize, newSize, n);
+    matrix<DATA> B21 = B.slice(newSize, n, 0, newSize);
+    matrix<DATA> B22 = B.slice(newSize, n, newSize, n);
+
+
+    // Declare variables outside parallel sections
+    matrix<DATA> P1, P2, P3, P4, P5, P6, P7;
+    
+    // Recursive calls
+    #pragma omp parallel
+    {
+         #pragma omp single nowait
+        {
+        #pragma omp task
+       /* matrix<DATA*/ P1 = strassen_multiply(A11 + A22, B11 + B22);  
+        #pragma omp task 
+        /* matrix<DATA*/ P2 = strassen_multiply(A21 + A22, B11);
+        #pragma omp task
+        /* matrix<DATA*/ P3 = strassen_multiply(A11, B12 - B22);
+        #pragma omp task
+        /* matrix<DATA*/ P4 = strassen_multiply(A22, B21 - B11);
+        #pragma omp task
+       /* matrix<DATA*/ P5 = strassen_multiply(A11 + A12, B22);
+        #pragma omp task
+        /* matrix<DATA*/ P6 = strassen_multiply(A21 - A11, B11 + B12);
+        #pragma omp task
+        /* matrix<DATA*/P7 = strassen_multiply(A12 - A22, B21 + B22);
+        }
+    }
 
     // Calculate the submatrices of the result
     matrix<DATA> C11 = P1 + P4 - P5 + P7;

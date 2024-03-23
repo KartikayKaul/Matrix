@@ -15,6 +15,7 @@
 #include<complex>
 #include<type_traits>
 #include<immintrin.h>
+#include<cblas.h>
 
 // testing
 #include<algorithm>
@@ -1800,7 +1801,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() * m1.cols() > 100)
+    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
             if(std::abs(m1(i,j) - tval) > PRECISION_TOL(DATA))
@@ -2106,6 +2107,24 @@ template<typename DATA>
 matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     return m1&m2;
 }
+
+template<typename DATA>
+matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
+    if(A.cols() != B.rows())
+        throw std::invalid_argument("matmul_blas: Matrix dimensions do not match.");
+    
+    int m = A.rows();
+    int n = B.cols();
+    int k = A.cols();
+
+    matrix<DATA> C(m, n);
+
+    // Call BLAS function for matrix-matrix multiplication
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, A.begin(), k, B.begin(), n, 0.0, C.begin(), n);
+
+    return C;
+}
+
 
 matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
     /*

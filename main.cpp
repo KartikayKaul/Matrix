@@ -46,10 +46,18 @@ int main(int arg, char *argv[]) {
     auto end2 = high_resolution_clock::now();
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 
+    //benchmarking matrix mul SIMD
+    cout<<"\n\n BLAS MATRIX MUL BENCHMARKING\n";
+    auto start3 = high_resolution_clock::now();
+    matrix<double> F = matmul_blas(A,B);
+    auto end3 = high_resolution_clock::now();
+    auto duration3 = duration_cast<milliseconds>(end3-start3);
+
     cout<<"\n\n====Benchmark Results====\n";
     cout<<"(Normal Matrix Mul) || Time taken: "<<duration.count() <<" milliseconds\n";       
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
+    cout<<"(BLAS Matrix Mul) || Time taken: "<<duration3.count() <<" milliseconds\n";
     deAlloc(array);
 
     cout<<"matmul result == simd result? ";
@@ -61,23 +69,25 @@ int main(int arg, char *argv[]) {
     cout<<"simd result == strassen result? ";
     (D==E).all(true) ? cout<<"true\n":cout<<"false\n";
 
+    cout<<"blas matmul == normal matmul result? ";
+    (C==F).all(true) ? cout<<"true\n":cout<<"false\n";
 
-    matrix<double> oowee(3,3,0.);
-    oowee.display("OOWEE:-");
-    oowee.fillUpperTriangle(4);
-    oowee.display("OOWEE OOWEE:-");
-    (is_triangular(oowee)) ? cout<<"Owee oowee! It is triangular.\n":cout<<"Noo.\n";
-    oowee.fillLowerTriangle(69);
-    oowee.display("OOWEE OOWEE CUPCAKKE!:-");
+    // matrix<double> oowee(3,3,0.);
+    // oowee.display("OOWEE:-");
+    // oowee.fillUpperTriangle(4);
+    // oowee.display("OOWEE OOWEE:-");
+    // (is_triangular(oowee)) ? cout<<"Owee oowee! It is triangular.\n":cout<<"Noo.\n";
+    // oowee.fillLowerTriangle(69);
+    // oowee.display("OOWEE OOWEE CUPCAKKE!:-");
 
-    matrix<int> ana(3,3,2);
-    matrix<int> lana(3,3,2);
-    (!(ana==lana)).display("ana!=lana:-");
+    // matrix<int> ana(3,3,2);
+    // matrix<int> lana(3,3,2);
+    // (!(ana==lana)).display("ana!=lana:-");
     
-    ana(0,1) = 10;
-    ana(1,2) = 5;
-    ana.display("ana:-");
-    (~ana).display("~ana:-");
+    // ana(0,1) = 10;
+    // ana(1,2) = 5;
+    // ana.display("ana:-");
+    // (~ana).display("~ana:-");
     // oowee.display("OOWEE OOWEE:-");
     // // type conversion handling
     // std::complex<double> value(5.2,1.5);

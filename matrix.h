@@ -296,10 +296,7 @@ class matrix {
         //copy constructor
         matrix(const matrix<DATA> &m) {
             this->getMemoryforVal( m.rows(), m.cols());
-
-            for(int i=0; i<this->row; ++i)
-                for(int j=0; j<this->col; ++j)
-                    *(val + (this->col)*i + j) = *(m.val + i*m.col + j);
+            std::copy(m.begin(), m.end(), this->val);
         }
         //copy constructor for handling different type matrices
         template<typename ATAD>
@@ -2379,7 +2376,6 @@ void init2dRandArray(int *array, int size_0, int size_1, int start=0, int end=9)
 }
 
 void init2dRandArray(float *array, int size_0, int size_1, float start=0., float end=1.) {
-    
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> distribution(start, end);
@@ -2390,8 +2386,7 @@ void init2dRandArray(float *array, int size_0, int size_1, float start=0., float
     }
 }
 
-void init2dRandArray(double *array, int size_0, int size_1, double start=0., double end=1.) {
-    
+void init2dRandArray(double *array, int size_0, int size_1, double start=0., double end=1.0) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> distribution(start, end);

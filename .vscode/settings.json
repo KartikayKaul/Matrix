@@ -64,6 +64,12 @@
         "xlocbuf": "cpp",
         "xlocmes": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "list": "cpp",
+        "numeric": "cpp",
+        "unordered_map": "cpp",
+        "xhash": "cpp"
     }
 }

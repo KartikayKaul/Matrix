@@ -11,9 +11,12 @@ int main(int arg, char *argv[]) {
     int N = std::atoi(argv[1]);
     
     cout<<"\nGenerating two "<<N<<'x'<<N<<" random matrices with double values... ";
+    auto alloc_time_start = high_resolution_clock::now();
     matrix<double> A = randomUniform(N,N);
     matrix<double> B = randomUniform(N,N);
-    cout<<"\nAllocation Complete.";
+    auto alloc_time_end = high_resolution_clock::now();
+    auto alloc_dur = duration_cast<milliseconds>(alloc_time_end-alloc_time_start);
+    cout<<"\nAllocation Complete. Time taken: "<<alloc_dur.count()<<" milliseconds.\n";
 
     cout<<"\n--:BENCHMARKING:--";
     //benchmarking matrix mul

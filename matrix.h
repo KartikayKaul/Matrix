@@ -243,54 +243,41 @@ class matrix {
         // initialize a square matrix using a flattened 2d array input
         matrix(DATA *data, int n) {
             getMemoryforVal(n,n);
-           
-            for(int i=0; i<n; ++i)
-                for(int j=0; j<n; ++j)
-                    *(val + i*n + j) = *(data + i*n + j);
+            std::copy(data, data + n*n, this->first);
         }
 
         // initialize a rectangle matrix using a flattened 2d array input
         matrix(DATA *data, int row, int col) {
             getMemoryforVal(row,col);
-
-            for(int i=0; i<row; ++i)
-                for(int j=0; j<col; ++j)
-                    *(val + i*col + j) = *(data + i*col + j);
+            std::copy(data, data + row*col, this->first);
         }
 
         // initialize a row x col matrix with `value`
         matrix(int row, int col, DATA value) {
             getMemoryforVal(row,col);
-
-            for(int i=0; i<row; ++i)
-                for(int j=0; j<col; ++j)
-                    *(val + i*col + j) = value;
+            std::fill(this->first, this->last, value);
         }
         
         matrix(int row, int col, std::complex<DATA> value) {
             getMemoryforVal(row,col);
-            
-            for(int i=0; i<row; ++i)
-                for(int j=0; j<col; ++j)
-                    *(val + i*col + j) = value;
+            std::fill(this->first, this->last, value);
         }
 
         // initialize using a 2d std::vector 
         matrix(std::vector<std::vector<DATA>> data) {
             getMemoryforVal(data.size(), data[0].size());
 
-            for(int i=0; i<this->row; ++i)
-                for(int j=0; j<this->col; ++j)
-                    *(val + i*(this->col) + j) = data[i][j];
+            int stride = 0;
+            for(int i=0; i<this->rows(); ++i) {
+                std::copy(data[i].begin(), data[i].end(), val + stride);
+                stride += this->cols();
+            }
         }
 
         //initialize a row vector 1xn using 1d std::vector
         matrix(std::vector<DATA> data) {
             getMemoryforVal(1, data.size());
-
-            for(int i=0; i<1; ++i)
-                for(int j=0; j<this->col; ++j)
-                    *(val + i*(this->col) + j) = data[j];
+            std::copy(data.begin(), data.end(), this->first);
         }
 
         //copy constructor
@@ -334,7 +321,6 @@ class matrix {
             }
         }
 
-
         // insert/update all the elements in row major form into the internal data structure
         void insertAll(int r=-1, int c=-1);
 
@@ -374,7 +360,7 @@ class matrix {
         matrix<DATA> &operator/=(const ATAD);
     
         // Index operator
-        DATA& operator()(const int, const int); //access an element of the matrix
+        DATA& operator()(const int, const int);
         const DATA& operator()(const int, const int) const;
         matrix<DATA> operator()(const matrix<bool>&);
 
@@ -1391,9 +1377,7 @@ void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
         throw std::invalid_argument("Bad dimension values.");
 
     this->changeDims(r, c);
-    for(int i=0; i<this->rows(); ++i)
-        for(int j=0; j<this->cols(); ++j)
-            *(val + i*(this->cols()) + j) = *(array + i*(c) + j);
+    std::copy(array, array + r*c, this->first);
 }
 
 /// Print matrix in ostream
@@ -1524,17 +1508,22 @@ matrix<DATA> diagonal(int n, DATA value) {
 //diagonam matrix generator : using a vector matrix
 template<typename DATA>
 matrix<DATA> diag(const matrix<DATA> &m1, int shift) {
-    if(m1.cols() != 1)
+    int R = m1.rows();
+    int C = m1.cols();
+
+    if(R<0 || C<0)
+        throw std::domain_error("diag() - Input matrix is empty.");
+    if(!((C == 1) ^ (R == 1)))
         throw std::invalid_argument("diagonal() - Input matrix is not a vector.");
     
     int abs_shift = ((shift<0)?-shift:shift);
-    int n = m1.rows() + abs_shift;
-    matrix<DATA> m(n, n, 0.);
-    for(int i=0; i<m1.rows(); ++i) {
+    int SIZE = ((C==1)?R:C) + abs_shift;
+    matrix<DATA> m(SIZE, SIZE, (DATA)0.);
+    for(int i=0; i<((C==1)?R:C); ++i) {
         if(shift<0) {
-            m(i+abs_shift,i) = m1(i,0);
+            m(i+abs_shift,i) = ((C==1)?m1(i,0):m1(0,i));
         } else {
-            m(i,i+abs_shift) = m1(i,0);
+            m(i,i+abs_shift) = ((C==1)?m1(i,0):m(0,i));
         }
     }
     return m;
@@ -1590,6 +1579,14 @@ bool is_triangular(matrix<DATA>& M) {
         }
     } // lower triangular
     return (upper || lower);
+}
+
+
+// all data values 
+template<typename DATA>
+matrix<DATA> zeros(int n) {
+    matrix<DATA> _0s(n,n, DATA(0));
+    return _0s;
 }
 
 // zero matrix square
@@ -2070,7 +2067,7 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     
     int i, j, k;
     matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
-    if (m1.rows() >= 100 || m1.cols() >= 100 || m2.cols() >= 100) {
+    if (m1.rows() >= 256 || m1.cols() >= 256 || m2.cols() >= 256) {
         #ifdef _OPENACC
         //std::cout<<"Using OpenACC for parallelization\n";
         #pragma acc parallel loop gang private(i, j, k) present(m1, m2, m)

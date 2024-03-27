@@ -541,15 +541,18 @@ bool is_triangular(matrix<DATA>&);
 matrix<double> zeros(int);
 matrix<double> zeros(int,int);
 template<typename DATA>
-matrix<double> zeros_like(const matrix<DATA>);
+matrix<double> zeros_like(const matrix<DATA>&);
 template<typename DATA>
-matrix<DATA> matrix_like(const matrix<DATA>);
+matrix<DATA> matrix_like(const matrix<DATA>&);
 
 matrix<double> randomUniform(int, double minVal=0., double maxVal=1.);
 matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
 
 matrix<int> randomUniformInt(int, int, int);
 matrix<int> randomUniformInt(int, int, int, int);
+
+matrix<double> randomNormal(int, double mean=0., double std=1.);
+matrix<double> randomNormal(int, int, double mean=0., double std=1.);
 
 /// Non-member operations declarations end ///
 
@@ -1589,6 +1592,13 @@ matrix<DATA> zeros(int n) {
     return _0s;
 }
 
+// all data values
+template<typename DATA>
+matrix<DATA> zeros(int n, int m) {
+    matrix<DATA> _0s(n,m, DATA(0));
+    return _0s;
+}
+
 // zero matrix square
 matrix<double> zeros(int n) {
     matrix<double> _0s(n,n,0);
@@ -1603,12 +1613,12 @@ matrix<double> zeros(int n, int m) {
 
 // zero matrix like another matrix]
 template<typename DATA>
-matrix<double> zeros_like(const matrix<DATA> m) {
+matrix<double> zeros_like(const matrix<DATA>& m) {
     matrix<double> _0s(m.rows(), m.cols(), 0);
     return _0s;
 }
 template<typename DATA>
-matrix<DATA> matrix_like(const matrix<DATA> m) {
+matrix<DATA> matrix_like(const matrix<DATA>& m) {
     matrix<DATA> _0s(m.rows(), m.cols());
     return _0s;
 }
@@ -1660,6 +1670,7 @@ matrix<int> randomUniformInt(int n, int minVal, int maxVal) {
     return mat;
 }
 
+
 // random integer nxm matrix
 matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
     matrix<int> mat(n,m);
@@ -1676,14 +1687,42 @@ matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
     return mat;
 }
 
+// random square matrix from normal distribution
+matrix<double> randomNormal(int n, double mean, double std) {
+    matrix<double> mat(n);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::normal_distribution<double> distribution(mean, std);
+
+    for(int i=0; i<n; ++i){
+        for(int j=0; j<n; ++j)
+            mat(i,j) = distribution(generator);
+    }
+    return mat;
+}
+
+// random nxm matrix from normal distribution
+matrix<double> randomNormal(int n, int m, double mean, double std) {
+    matrix<double> mat(n,m);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::normal_distribution<double> distribution(mean, std);
+
+    for(int i=0; i<n; ++i){
+        for(int j=0; j<m; ++j)
+            mat(i,j) = distribution(generator);
+    }
+    return mat;
+}
+
 matrix<bool> operator!(const matrix<bool> &m) {
     matrix<bool> result(m.rows(), m.cols());
-
     auto itRez = result.begin();
     for(auto it = m.begin(); it != m.end(); ++it, ++itRez) {
         *itRez = !(*it);
     }
-
     return result;
 }
 

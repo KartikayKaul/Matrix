@@ -3,7 +3,7 @@
 #define MATRIX_H
 
 #include<iostream>
-#include<omp.h> // for matrix multiplication speedup.
+#include<omp.h>
 #include<openacc.h>
 #include<stdexcept>
 #include<fstream>
@@ -35,6 +35,7 @@ namespace linear{
 //stringify variable name MACRO
 #define CHANGE_ID_TO_STRING(x) (#x)
 
+// range is specially made for slicing operation to generate submatrices
 struct range {
   int start;
   int end;
@@ -45,40 +46,57 @@ struct range {
   const int size() {return end - start;}
 };
 
-//test code
 //Defining type trait to check if a type is complex
 template<typename DATA>
 struct is_complex : std::false_type {};
-
 template<typename DATA>
 struct is_complex<std::complex<DATA>> : std::true_type {};
-// test code ends
+
+// This has been added to be able to print the data type of the matrix
+template <typename T>
+struct TypeName { //defaulting case if i missed any numerical type
+    static constexpr const char* value = "unknown";
+};
+
+#define DEFINE_TYPENAME_FOR_TYPE(TYPE)\
+    template <>\
+    struct TypeName<TYPE> {\
+        static constexpr const char* value = #TYPE;\
+    };
+
+DEFINE_TYPENAME_FOR_TYPE(bool)
+DEFINE_TYPENAME_FOR_TYPE(char)
+DEFINE_TYPENAME_FOR_TYPE(signed char)
+DEFINE_TYPENAME_FOR_TYPE(unsigned char)
+DEFINE_TYPENAME_FOR_TYPE(short)
+DEFINE_TYPENAME_FOR_TYPE(unsigned short)
+DEFINE_TYPENAME_FOR_TYPE(int)
+DEFINE_TYPENAME_FOR_TYPE(unsigned int)
+DEFINE_TYPENAME_FOR_TYPE(long)
+DEFINE_TYPENAME_FOR_TYPE(unsigned long)
+DEFINE_TYPENAME_FOR_TYPE(long long)
+DEFINE_TYPENAME_FOR_TYPE(unsigned long long)
+DEFINE_TYPENAME_FOR_TYPE(float)
+DEFINE_TYPENAME_FOR_TYPE(double)
+DEFINE_TYPENAME_FOR_TYPE(long double)
+DEFINE_TYPENAME_FOR_TYPE(std::complex<double>)
+DEFINE_TYPENAME_FOR_TYPE(std::complex<int>)
+DEFINE_TYPENAME_FOR_TYPE(std::complex<float>)
+DEFINE_TYPENAME_FOR_TYPE(std::complex<long double>)
 
 template<typename DATA>
 class matrix {
     /*  
-        DATA MEMEBERS:-
-            val = flattened 2d array of type DATA in row major form
-            row = number of rows of the matrix
-            col = number of columns of the matrix
-        Guideline:
-            1: It is mandatory that you make use of data types that are of numerical
-               type to initialise the internal values of matrix.
-            2: It is recommended to use float or double numerical type to initialise
-               the `val` array of the matrix object. Certain operations lose precision
-                in results when using `int` numerical types 
-            3: While using a matrix operation ensure you close the operands with 
-               parenthesis with the binary or unary operator that is being used
-                For example, to perform multiplication of A and B to give C we will
-                             write "matrix<int> C = (A & B);" It is not necessary
-                             but ensures safety in case ambiguous operator
-                             precedence arises and augments errors.
+        DATA MEMBERS:- (- private; + public)
+           - val = flattened 2d array of type DATA in row major form
+           - row = number of rows of the matrix
+           - col = number of columns of the matrix
+           - *first = points to the first location of the *val
+           - *last = points to the last value in *val (*last <- *val + (row * col))
     */
     static_assert(std::disjunction<std::is_arithmetic<DATA>, is_complex<DATA>>::value, "`matrix` class only supports numerical types.");
     DATA *val;
     int row, col;
-
-
     DATA *first = NULL;
     DATA *last = NULL;
 
@@ -140,6 +158,16 @@ class matrix {
 
     public:
          //// EXPERIMENTAL FUNCTIONS ////
+         //print the type of matrix in console
+         void print_type() {
+            std::cout<<std::endl<<TypeName<DATA>::value<<std::endl;
+         }
+
+         //returns string of the type of the matrix
+         static constexpr const char* type_s() {
+            return TypeName<DATA>::value;
+         }
+
          //First and Last accessors
          DATA* begin() const {
             return this->first;
@@ -301,7 +329,6 @@ class matrix {
             }
         }
 
-
         //initializer list
         matrix(std::initializer_list<std::initializer_list<DATA>> list) {
             if(list.size() == 0 || list.begin()->size() == 0)
@@ -312,7 +339,7 @@ class matrix {
                 int i=0, j=0;
                 for(const auto& ROW : list) {
                     for(const auto& elem : ROW) {
-                        *(val + (this->col)*i + j) = elem;
+                        *(val + (this->col)*i + j) = static_cast<DATA>(elem);
                         ++j;
                     }
                     j=0;
@@ -435,8 +462,8 @@ class matrix {
         DATA item();
         bool isComparable(const matrix<DATA>&) const;
         bool isMatMulDefined(const matrix<DATA>&) const;
-        bool all(bool);
-        bool isany(bool);
+        bool all(bool value);
+        bool isany(bool value);
         std::vector<std::vector<DATA>> toVector();
 
         /// FILE OPERATIONS I/O
@@ -445,6 +472,7 @@ class matrix {
 
         
 };
+
 
 //// NON-MEMBER OPERATIONS DECLARATIONS ///
 matrix<bool> operator!(const matrix<bool>&);
@@ -545,14 +573,19 @@ matrix<double> zeros_like(const matrix<DATA>&);
 template<typename DATA>
 matrix<DATA> matrix_like(const matrix<DATA>&);
 
+matrix<double> ones(int);
+matrix<double> ones(int,int);
+
 matrix<double> randomUniform(int, double minVal=0., double maxVal=1.);
 matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
 
 matrix<int> randomUniformInt(int, int, int);
 matrix<int> randomUniformInt(int, int, int, int);
 
-matrix<double> randomNormal(int, double mean=0., double std=1.);
-matrix<double> randomNormal(int, int, double mean=0., double std=1.);
+template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+matrix<DATA> randomNormal(int, DATA mean=0., DATA std=1.);
+template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+matrix<DATA> randomNormal(int, int, DATA mean=0., DATA std=1.);
 
 /// Non-member operations declarations end ///
 
@@ -1526,7 +1559,7 @@ matrix<DATA> diag(const matrix<DATA> &m1, int shift) {
         if(shift<0) {
             m(i+abs_shift,i) = ((C==1)?m1(i,0):m1(0,i));
         } else {
-            m(i,i+abs_shift) = ((C==1)?m1(i,0):m(0,i));
+            m(i,i+abs_shift) = ((C==1)?m1(i,0):m1(0,i));
         }
     }
     return m;
@@ -1623,6 +1656,31 @@ matrix<DATA> matrix_like(const matrix<DATA>& m) {
     return _0s;
 }
 
+//all data type values for ones
+template<typename DATA>
+matrix<DATA> ones(int n) {
+    matrix<DATA> _1s(n,n,(DATA)1);
+    return _1s;
+}
+
+template<typename DATA>
+matrix<DATA> ones(int n, int m) {
+    matrix<DATA> _1s(n,m,(DATA)1);
+    return _1s;
+}
+
+// double ones matrices
+matrix<double> ones(int n) {
+    matrix<double> _1s(n,n,1.);
+    return _1s;
+}
+
+// double rectangle matrices of ones
+matrix<double> ones(int n, int m) {
+    matrix<double> _1s(n,m,1.);
+    return _1s;
+}
+
 
 // random square matrix
 matrix<double> randomUniform(int n, double minVal, double maxVal) {
@@ -1687,7 +1745,7 @@ matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
     return mat;
 }
 
-// random square matrix from normal distribution
+//random normal double specialisation
 matrix<double> randomNormal(int n, double mean, double std) {
     matrix<double> mat(n);
 
@@ -1702,7 +1760,6 @@ matrix<double> randomNormal(int n, double mean, double std) {
     return mat;
 }
 
-// random nxm matrix from normal distribution
 matrix<double> randomNormal(int n, int m, double mean, double std) {
     matrix<double> mat(n,m);
 
@@ -1716,6 +1773,23 @@ matrix<double> randomNormal(int n, int m, double mean, double std) {
     }
     return mat;
 }
+
+// random nxm matrix from normal distribution
+template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+matrix<DATA> randomNormal(int n, int m, DATA mean, DATA std) {
+    matrix<DATA> mat(n,m);
+
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::normal_distribution<DATA> distribution(mean, std);
+
+    for(int i=0; i<n; ++i){
+        for(int j=0; j<m; ++j)
+            mat(i,j) = distribution(generator);
+    }
+    return mat;
+}
+
 
 matrix<bool> operator!(const matrix<bool> &m) {
     matrix<bool> result(m.rows(), m.cols());
@@ -2202,7 +2276,7 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
 
 // Strassen's algorithm for multiplying square matrices
 template<typename DATA>
-matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=64) {
+matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=32) {
     int n = A.rows();
     if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
         throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
@@ -2233,7 +2307,7 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     matrix<DATA> P4 = strassen_multiply(A22, B21 - B11);
     matrix<DATA> P5 = strassen_multiply(A11 + A12, B22);
     matrix<DATA> P6 = strassen_multiply(A21 - A11, B11 + B12);
-    matrix<DATA>P7 = strassen_multiply(A12 - A22, B21 + B22);
+    matrix<DATA> P7 = strassen_multiply(A12 - A22, B21 + B22);
     
     // Calculate the submatrices of the result
     matrix<DATA> C11 = P1 + P4 - P5 + P7;
@@ -2253,7 +2327,7 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
 
 // Parallelized Strassen's algorithm for multiplying square matrices
 template<typename DATA>
-matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=64) {
+matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=32) {
     int n = A.rows();
     if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
         throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");

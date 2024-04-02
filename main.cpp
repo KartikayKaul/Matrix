@@ -26,7 +26,6 @@ int main(int arg, char *argv[]) {
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 
-
     // //benchmarking matrix mul SIMD
     // cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
     // auto start1 = high_resolution_clock::now();

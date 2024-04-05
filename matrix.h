@@ -14,7 +14,7 @@
 #include<iomanip>
 #include<complex>
 #include<type_traits>
-#include<immintrin.h>
+#include<x86intrin.h>
 #include<cblas.h>
 
 // testing
@@ -367,13 +367,7 @@ class matrix {
         void iota(int start=int());
 
         ~matrix() {
-            if(this->row > 0 && this->col > 0) {
-                delete[] val;
-                val = NULL;
-                if (first == val) {
-                    first = NULL;
-                }
-            }
+            this->delMemoryforVal();
         }
 
         /////// MATRIX OPERATIONS
@@ -418,7 +412,7 @@ class matrix {
         matrix<DATA> reshape(int newRow, int newCol);
 
         // Transpose operation
-        matrix<DATA> operator~();
+        matrix<DATA> operator~() const;
         matrix<DATA> transpose();
         matrix<DATA> T(){ return this->transpose();}
 
@@ -457,7 +451,7 @@ class matrix {
         }
 
         /// QUERY methods
-        bool isSquare() { if(this->col == this->row) return true; else return false;}
+        bool isSquare() const { if(this->col == this->row) return true; else return false;}
         bool isSymmetric();
         DATA item();
         bool isComparable(const matrix<DATA>&) const;
@@ -1371,7 +1365,7 @@ void matrix<DATA>::setSubMatrix(range rowRng, range colRng, const matrix<DATA>& 
 
 /// TRANSPOSE OPERATION
 template<typename DATA>
-matrix<DATA> matrix<DATA>::operator~() {
+matrix<DATA> matrix<DATA>::operator~() const {
     matrix<DATA> m(this->col, this->row);
 
     //using insertAt operation to fill in the elements
@@ -2216,6 +2210,40 @@ matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 }
 
 template<typename DATA>
+matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=128) {
+    if (m1.cols() != m2.rows()) {
+        throw std::invalid_argument("Internal dimensions do not match.");
+    }
+
+    const int m = m1.rows();
+    const int n = m1.cols();
+    const int p = m2.cols();
+
+    matrix<DATA> result(m, p, (DATA)0);
+
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < m; i += block_size) {
+        for (int k = 0; k < p; k += block_size) {
+            for (int j = 0; j < n; j += block_size) {
+                // Compute block multiplication
+                for (int ii = i; ii < std::min(i + block_size, m); ++ii) {
+                    for (int kk = k; kk < std::min(k + block_size, p); ++kk) {
+                        DATA sum = result(ii, kk);
+                        #pragma omp simd
+                        for (int jj = j; jj < std::min(j + block_size, n); ++jj) {
+                            sum += m1(ii, jj) * m2(jj, kk);
+                        }
+                        result(ii, kk) = sum;
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+template<typename DATA>
 matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
     if(A.cols() != B.rows())
         throw std::invalid_argument("matmul_blas: Matrix dimensions do not match.");
@@ -2231,7 +2259,6 @@ matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
 
     return C;
 }
-
 
 matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
     /*
@@ -2250,13 +2277,13 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         int colsB = B.cols();
         matrix<double> result(rowsA, colsB);
         
-        #pragma omp parallel for collapse(2) num_threads(omp_get_max_threads())
+        #pragma omp parallel for collapse(2)
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
                 __m256d sum = _mm256_setzero_pd();  // Initialize sum vector with zeros
                 
                 for (int k = 0; k < colsA; ++k) {
-                    // Load 2 elements from the current row of matrix A and 2 elements from the current column of matrix B
+                    
                     __m256d a = _mm256_loadu_pd(&A(i, k));
                     __m256d b = _mm256_loadu_pd(&B(k, j));
 
@@ -2269,8 +2296,7 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         }
         return result;
     #else
-        //matrix<double> result(A.rows(), B.cols(), 0.); 
-        throw std::runtime_error("matmul_simd() - AVX instructions never compiled. See if you used `-mavx` flag.");
+        throw std::runtime_error("matmul_simd() - SIMD instructions never compiled. See if you used `-mavx` flag.");
     #endif
 }
 
@@ -2283,10 +2309,19 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     }
     
     if (n < base_case_cutoff) {
-        return matmul(A,B);
+        return A&B;
     }
 
     int newSize = n / 2;
+
+     // Allocate memory buffers for intermediate results
+    matrix<DATA> P1(newSize, newSize);
+    matrix<DATA> P2(newSize, newSize);
+    matrix<DATA> P3(newSize, newSize);
+    matrix<DATA> P4(newSize, newSize);
+    matrix<DATA> P5(newSize, newSize);
+    matrix<DATA> P6(newSize, newSize);
+    matrix<DATA> P7(newSize, newSize);
 
     // Partition matrices
     matrix<DATA> A11 = A.slice(0, newSize, 0, newSize);
@@ -2299,16 +2334,15 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     matrix<DATA> B21 = B.slice(newSize, n, 0, newSize);
     matrix<DATA> B22 = B.slice(newSize, n, newSize, n);
 
-    
-    // Recursive calls
-    matrix<DATA> P1 = strassen_multiply(A11 + A22, B11 + B22); 
-    matrix<DATA> P2 = strassen_multiply(A21 + A22, B11);
-    matrix<DATA> P3 = strassen_multiply(A11, B12 - B22);
-    matrix<DATA> P4 = strassen_multiply(A22, B21 - B11);
-    matrix<DATA> P5 = strassen_multiply(A11 + A12, B22);
-    matrix<DATA> P6 = strassen_multiply(A21 - A11, B11 + B12);
-    matrix<DATA> P7 = strassen_multiply(A12 - A22, B21 + B22);
-    
+    // Compute intermediate matrices recursively
+    P1 = strassen_multiply(A11 + A22, B11 + B22);
+    P2 = strassen_multiply(A21 + A22, B11);
+    P3 = strassen_multiply(A11, B12 - B22);
+    P4 = strassen_multiply(A22, B21 - B11);
+    P5 = strassen_multiply(A11 + A12, B22);
+    P6 = strassen_multiply(A21 - A11, B11 + B12);
+    P7 = strassen_multiply(A12 - A22, B21 + B22);
+
     // Calculate the submatrices of the result
     matrix<DATA> C11 = P1 + P4 - P5 + P7;
     matrix<DATA> C12 = P3 + P5;
@@ -2322,6 +2356,7 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     result.setSubMatrix(newSize, n, 0, newSize, C21);
     result.setSubMatrix(newSize, n, newSize, n, C22);
 
+    // Return the final result
     return result;
 }
 
@@ -2334,7 +2369,7 @@ matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int ba
     }
     
     if (n < base_case_cutoff) {
-        return matmul(A,B);
+        return A&B;
     }
 
     int newSize = n / 2;

@@ -69,7 +69,5 @@
         "functional": "cpp",
         "list": "cpp",
         "numeric": "cpp",
-        "unordered_map": "cpp",
-        "xhash": "cpp"
     }
 }

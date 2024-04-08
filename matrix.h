@@ -453,7 +453,7 @@ class matrix {
         /// QUERY methods
         bool isSquare() const { if(this->col == this->row) return true; else return false;}
         bool isSymmetric();
-        DATA item();
+        DATA item() const;
         bool isComparable(const matrix<DATA>&) const;
         bool isMatMulDefined(const matrix<DATA>&) const;
         bool all(bool value);
@@ -1043,7 +1043,7 @@ bool matrix<DATA>::isSymmetric() {
 }
 
 template<typename DATA>
-DATA matrix<DATA>::item() {
+DATA matrix<DATA>::item() const{
     if(this->row == 1  && this->col == 1) {
         return *val; 
     } else {
@@ -2169,7 +2169,7 @@ matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
 template<typename DATA>
 matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     if(m1.cols() != m2.rows()) {
-        throw std::invalid_argument("Internal dimensions do not match.");   
+        throw std::invalid_argument("linear::matmul - Internal dimensions do not match.");   
     }
     
     int i, j, k;
@@ -2210,9 +2210,9 @@ matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 }
 
 template<typename DATA>
-matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=128) {
+matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=64) {
     if (m1.cols() != m2.rows()) {
-        throw std::invalid_argument("Internal dimensions do not match.");
+        throw std::invalid_argument("linear::matmul_block - Internal dimensions do not match.");
     }
 
     const int m = m1.rows();
@@ -2246,7 +2246,7 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
 template<typename DATA>
 matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
     if(A.cols() != B.rows())
-        throw std::invalid_argument("matmul_blas: Matrix dimensions do not match.");
+        throw std::invalid_argument(";inear::matmul_blas - Internal dimensions do not match.");
     
     int m = A.rows();
     int n = B.cols();
@@ -2270,7 +2270,7 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
     
     #ifdef __AVX__
         if (A.cols() != B.rows()) {
-            throw std::invalid_argument("Matrix dimensions do not match for multiplication.");
+            throw std::invalid_argument("linear::matmul_simd - Internal dimensions do not match.");
         }
         int rowsA = A.rows();
         int colsA = A.cols();
@@ -2296,7 +2296,7 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         }
         return result;
     #else
-        throw std::runtime_error("matmul_simd() - SIMD instructions never compiled. See if you used `-mavx` flag.");
+        throw std::runtime_error("linear::matmul_simd - SIMD instructions never compiled. See if you used `-mavx` flag.");
     #endif
 }
 

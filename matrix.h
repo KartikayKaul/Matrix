@@ -3,6 +3,7 @@
 #define MATRIX_H
 
 #include<iostream>
+#include<cstdlib>
 #include<omp.h>
 #include<openacc.h>
 #include<stdexcept>
@@ -29,13 +30,13 @@ namespace linear{
 #define PRECISION_TOL(type) std::numeric_limits<type>::epsilon() * std::pow(10, MATRIX_PRECISION_TOL)
 
 //path macros
-#define SAVEPATH "matrixSaves/"
-#define F_EXT ".trix"
+#define SAVEPATH "saves" //default path
+#define F_EXT ".linmat" //default linear::matrix format
 
 //stringify variable name MACRO
 #define CHANGE_ID_TO_STRING(x) (#x)
 
-// range is specially made for slicing operation to generate submatrices
+// linear::range is specially made for slicing operation to generate submatrices
 struct range {
   int start;
   int end;
@@ -46,7 +47,7 @@ struct range {
   const int size() {return end - start;}
 };
 
-//Defining type trait to check if a type is complex
+//Defining type trait to check if a type is complex //call as linear::is_complex<nametype>
 template<typename DATA>
 struct is_complex : std::false_type {};
 template<typename DATA>
@@ -102,32 +103,57 @@ class matrix {
 
     //deallocate memory for Val
     void delMemoryforVal() {
-        if(this->rows() > 0 && this->cols() > 0) {
+        if (this->rows() > 0 && this->cols() > 0) {
             this->first = NULL;
-            this->last = NULL;
 
+    #ifdef _POSIX_VERSION
+            // Deallocate memory using free if posix_memalign is available
+            free(this->val);
+    #else
+            // Use delete[] for deallocation if posix_memalign is not available
             delete[] this->val;
+    #endif
+
             this->val = NULL;
         }
-    }
+}
 
     // memory allocation for internal data structure holding the values
     void getMemoryforVal(int r, int c) {
         if(r<1 || c<1)
             throw std::invalid_argument("getMemoryforVal() - invalid dimension values.");
-            
+        
+        // Get alignment requirement for `DATA` type
+        constexpr std::size_t alignment = alignof(DATA); 
+
+        // Allocate memory with alignment
         try {
-            this->val = new DATA[r*c];
-            
-        }  catch(const std::bad_alloc& e) {
-            std::cerr<< "Heap memory allocation failed."<<e.what()<<"\n";
+            void* aligned_ptr;
+    #ifdef _POSIX_VERSION
+            // POSIX platforms (Linux, Unix, macOS)
+            if (posix_memalign(&aligned_ptr, alignment, sizeof(DATA) * r * c) != 0) {
+                throw std::bad_alloc(); // posix_memalign failed
+            }
+    #else
+            // Non-POSIX platforms
+            aligned_ptr = std::aligned_alloc(alignment, sizeof(DATA) * r * c);
+            if (aligned_ptr == nullptr) {
+                throw std::bad_alloc(); // std::aligned_alloc failed
+            }
+    #endif
+            // Assign aligned memory to val
+            this->val = static_cast<DATA*>(aligned_ptr);
+        } catch (const std::bad_alloc& e) {
+            std::cerr << "Heap memory allocation failed: " << e.what() << "\n";
+            throw;
         }
+
         this->row = r;
         this->col = c;
 
         //experimental
         first = this->val;
-        last = this->val + (this->rows()*this->cols());
+        last = this->val + (this->rows() * this->cols());
     }
 
     // validate the Param values
@@ -218,6 +244,7 @@ class matrix {
          void fillTril(DATA value) {
             this->fillLowerTriangle(value);
          }
+
         //// EXPERIMENTAL ENDS ////
 
         // Getting matrix dimensions
@@ -452,17 +479,17 @@ class matrix {
 
         /// QUERY methods
         bool isSquare() const { if(this->col == this->row) return true; else return false;}
-        bool isSymmetric();
+        bool isSymmetric() const;
         DATA item() const;
         bool isComparable(const matrix<DATA>&) const;
         bool isMatMulDefined(const matrix<DATA>&) const;
-        bool all(bool value);
-        bool isany(bool value);
+        bool all(bool value) const;
+        bool isany(bool value) const;
         std::vector<std::vector<DATA>> toVector();
 
         /// FILE OPERATIONS I/O
-        bool saveMatrix(const std::string&);
-        bool loadMatrix(const std::string&);
+        bool saveMatrix(const std::string&, const std::string& folderpath=SAVEPATH);
+        bool loadMatrix(const std::string&, const std::string& folderpath=SAVEPATH);
 
         
 };
@@ -580,6 +607,9 @@ template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DAT
 matrix<DATA> randomNormal(int, DATA mean=0., DATA std=1.);
 template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
 matrix<DATA> randomNormal(int, int, DATA mean=0., DATA std=1.);
+
+matrix<double> randomNormal(int, int, double mean=0., double std=1.);
+matrix<double> randomNormal(int, double mean=0., double std=1.);
 
 /// Non-member operations declarations end ///
 
@@ -1032,11 +1062,11 @@ bool matrix<DATA>::isMatMulDefined(const matrix<DATA>& m) const {
 }
 
 template<typename DATA>
-bool matrix<DATA>::isSymmetric() {
+bool matrix<DATA>::isSymmetric() const{
     if(this->row == this->col)
      {
-        matrix<DATA> Transpose = this->T();
-        if(Transpose == *this)
+        matrix<DATA> Transpose = ~(*this);
+        if((Transpose == *this).all(true))
             return true;
      }
      return false;
@@ -1047,12 +1077,12 @@ DATA matrix<DATA>::item() const{
     if(this->row == 1  && this->col == 1) {
         return *val; 
     } else {
-        throw std::invalid_argument("To throw an item out it is supposed to be 1x1 matrix.");
+        throw std::invalid_argument("linear::matrix::item() - To throw an item out it is supposed to be 1x1 matrix.");
     }
 }
 
 template<typename DATA>
- bool matrix<DATA>::all(bool value) {
+ bool matrix<DATA>::all(bool value) const {
     static_assert(std::is_same_v<DATA,bool>, "all() is only supported for boolean matrices.");
     
     for(int i=0; i<this->rows(); ++i) {
@@ -1066,7 +1096,7 @@ template<typename DATA>
 }
 
 template<typename DATA>
-bool matrix<DATA>::isany(bool value) {
+bool matrix<DATA>::isany(bool value) const {
     static_assert(std::is_same_v<DATA,bool>, "isany() is only supported for boolean matrices.");
     
     for(int i=0; i<this->rows(); ++i) {
@@ -1236,12 +1266,12 @@ matrix<DATA> matrix<DATA>::operator^(int power) {
     for(int i=0; i<m.rows(); ++i) {
         for(int j=0; j<m.cols(); ++j) {
             DATA prod=1.;
-            prod = pow(*(val + i*(this->col) + j), power);
+            prod = std::pow(*(val + i*(this->col) + j), power);
             m(i,j) = prod;
         }
     }
     return m;
-}   
+}
 
 /// INDEX OPERATION
 template<typename DATA>
@@ -1469,8 +1499,8 @@ void matrix<DATA>::display(const std::string msg)  const{
 
 /// File operation on saving a matrix
 template<typename DATA>
-bool matrix<DATA>::saveMatrix(const std::string& filename) {
-    std::string fullpath = SAVEPATH + filename + F_EXT;
+bool matrix<DATA>::saveMatrix(const std::string& filename, const std::string& folderpath) {
+    std::string fullpath = folderpath + '/' + filename + F_EXT;
     std::ofstream saveFile(fullpath);
 
     if(saveFile.is_open()) {
@@ -1496,8 +1526,8 @@ bool matrix<DATA>::saveMatrix(const std::string& filename) {
 
 /// File operation on loading a matrix
 template<typename DATA>
-bool matrix<DATA>::loadMatrix(const std::string& filename) {
-    std::string fullpath = SAVEPATH + filename + F_EXT;
+bool matrix<DATA>::loadMatrix(const std::string& filename, const std::string& folderpath) {
+    std::string fullpath = folderpath + '/' + filename + F_EXT;
     std::ifstream loadFile(fullpath);
 
     if(loadFile.is_open()) {
@@ -1706,6 +1736,9 @@ matrix<double> randomUniform(int n, int m, double minVal, double maxVal) {
     return mat;
 }
 
+//general function template for 
+
+
 // random integer square matrix
 matrix<int> randomUniformInt(int n, int minVal, int maxVal) {
     matrix<int> mat(n);
@@ -1784,7 +1817,23 @@ matrix<DATA> randomNormal(int n, int m, DATA mean, DATA std) {
     return mat;
 }
 
+// random nxn matrix from normal distribution
+template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+matrix<DATA> randomNormal(int n, DATA mean, DATA std) {
+    matrix<DATA> mat(n);
 
+    std::random_device dev;
+    std::mt19937 generator(dev());
+    std::normal_distribution<DATA> distribution(mean, std);
+
+    for(int i=0; i<n; ++i){
+        for(int j=0; j<n; ++j)
+            mat(i,j) = distribution(generator);
+    }
+    return mat;
+}
+
+// not operator on a boolean matrix
 matrix<bool> operator!(const matrix<bool> &m) {
     matrix<bool> result(m.rows(), m.cols());
     auto itRez = result.begin();
@@ -2210,7 +2259,7 @@ matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 }
 
 template<typename DATA>
-matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=64) {
+matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=128) {
     if (m1.cols() != m2.rows()) {
         throw std::invalid_argument("linear::matmul_block - Internal dimensions do not match.");
     }
@@ -2228,12 +2277,12 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
                 // Compute block multiplication
                 for (int ii = i; ii < std::min(i + block_size, m); ++ii) {
                     for (int kk = k; kk < std::min(k + block_size, p); ++kk) {
-                        DATA sum = result(ii, kk);
+                        DATA sum = 0;
                         #pragma omp simd
                         for (int jj = j; jj < std::min(j + block_size, n); ++jj) {
                             sum += m1(ii, jj) * m2(jj, kk);
                         }
-                        result(ii, kk) = sum;
+                        result(ii, kk) += sum;
                     }
                 }
             }
@@ -2477,6 +2526,7 @@ matrix<double> tril(int size) {
     return lower_triangle_matrix(size);
 }
 /////////
+
 }//linear namespace
 
 template<typename DATA>
@@ -2558,4 +2608,7 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
         }
     }
 }
+
+
+
 #endif // MATRIX_H

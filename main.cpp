@@ -34,25 +34,32 @@ int main(int arg, char *argv[]) {
     auto duration1 = duration_cast<milliseconds>(end1-start1);
 
     //benchmarking matrix mul SIMD
-    cout<<"\n\n STRASSEN'S MATRIX MUL BENCHMARKING\n";
+    cout<<"\n\n STRASSEN'S MATRIX MUL BENCHMARKING";
     auto start2 = high_resolution_clock::now();
     matrix<double> E = strassen_multiply(A,B);
     auto end2 = high_resolution_clock::now();
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 
     //benchmarking matrix mul blas
-    cout<<"\n\n BLAS MATRIX MUL BENCHMARKING\n";
+    cout<<"\n\n BLAS MATRIX MUL BENCHMARKING";
     auto start3 = high_resolution_clock::now();
     matrix<double> F = matmul_blas(A,B);
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<milliseconds>(end3-start3);
 
     //benchmarking matrix mul parallel strassen
-    cout<<"\n\n PARALLEL STRASSEN MATRIX MUL BENCHMARKING\n";
+    cout<<"\n\n PARALLEL STRASSEN MATRIX MUL BENCHMARKING";
     auto start4 = high_resolution_clock::now();
     matrix<double> G = para_strassen_multiply(A,B);
     auto end4 = high_resolution_clock::now();
     auto duration4 = duration_cast<milliseconds>(end4-start4);
+
+    //benchmarking matrix mul blocked
+    cout<<"\n\n BLOCK MATRIX MUL BENCHMARKING";
+    auto start5 = high_resolution_clock::now();
+    matrix<double> H = para_strassen_multiply(A,B);
+    auto end5 = high_resolution_clock::now();
+    auto duration5 = duration_cast<milliseconds>(end5-start5);
 
     cout<<"\n\n====Benchmark Results====\n";
     cout<<"(Normal Matrix Mul) || Time taken: "<<duration.count() <<" milliseconds\n";       
@@ -60,6 +67,7 @@ int main(int arg, char *argv[]) {
     cout<<"(Strassen Matrix Mul) || Time taken: "<<duration2.count() <<" milliseconds\n";
     cout<<"(BLAS Matrix Mul) || Time taken: "<<duration3.count() <<" milliseconds\n";
     cout<<"(Parallel Strassen Matrix Mul) || Time taken: "<<duration4.count() <<" milliseconds\n";
+    cout<<"(Block Matrix Mul) || Time taken: "<<duration5.count() <<" milliseconds\n";
     deAlloc(array);
 
     cout<<"matmul result == simd result? ";
@@ -77,6 +85,8 @@ int main(int arg, char *argv[]) {
     cout<<"normal matmul == parallel strassen result? ";
     (C==G).all(true) ? cout<<"true\n":cout<<"false\n";
     
+    cout<<"normal matmul == block matmul result? ";
+    (C==H).all(true) ? cout<<"true\n":cout<<"false\n";
 
     matrix<double> allones = ones<double>(N);
     matrix<double> allzeros = eye<double>(N);

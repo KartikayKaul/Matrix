@@ -129,20 +129,20 @@ class matrix {
         // Allocate memory with alignment
         try {
             void* aligned_ptr;
-    #ifdef _POSIX_VERSION
-            // POSIX platforms (Linux, Unix, macOS)
-            if (posix_memalign(&aligned_ptr, alignment, sizeof(DATA) * r * c) != 0) {
-                throw std::bad_alloc(); // posix_memalign failed
-            }
-    #else
-            // Non-POSIX platforms
-            aligned_ptr = std::aligned_alloc(alignment, sizeof(DATA) * r * c);
-            if (aligned_ptr == nullptr) {
-                throw std::bad_alloc(); // std::aligned_alloc failed
-            }
-    #endif
-            // Assign aligned memory to val
-            this->val = static_cast<DATA*>(aligned_ptr);
+            #ifdef _POSIX_VERSION
+                // POSIX platforms (Linux, Unix, macOS)
+                if (posix_memalign(&aligned_ptr, alignment, sizeof(DATA) * r * c) != 0) {
+                    throw std::bad_alloc(); // posix_memalign failed
+                }
+            #else
+                // Non-POSIX platforms
+                aligned_ptr = std::aligned_alloc(alignment, sizeof(DATA) * r * c);
+                if (aligned_ptr == nullptr) {
+                    throw std::bad_alloc(); // std::aligned_alloc failed
+                }
+            #endif
+                // Assign aligned memory to val
+                this->val = static_cast<DATA*>(aligned_ptr);
         } catch (const std::bad_alloc& e) {
             std::cerr << "Heap memory allocation failed: " << e.what() << "\n";
             throw;
@@ -153,7 +153,7 @@ class matrix {
 
         //experimental
         first = this->val;
-        last = this->val + (this->rows() * this->cols());
+        last = this->val + (r*c);
     }
 
     // validate the Param values
@@ -443,6 +443,8 @@ class matrix {
         matrix<DATA> transpose();
         matrix<DATA> T(){ return this->transpose();}
 
+        matrix<DATA> adjoint();
+
         /// Slice operation
         matrix<DATA> slice(int, int, int, int);
         matrix<DATA> operator()(range, range);
@@ -590,10 +592,14 @@ bool is_triangular(matrix<DATA>&);
 matrix<double> zeros(int);
 matrix<double> zeros(int,int);
 template<typename DATA>
-matrix<double> zeros_like(const matrix<DATA>&);
+matrix<DATA> zeros_like(const matrix<DATA>&);
 template<typename DATA>
 matrix<DATA> matrix_like(const matrix<DATA>&);
 
+template<typename DATA>
+matrix<DATA> ones(int);
+template<typename DATA>
+matrix<DATA> ones(int,int);
 matrix<double> ones(int);
 matrix<double> ones(int,int);
 
@@ -1309,10 +1315,8 @@ matrix<DATA> matrix<DATA>::operator()(const matrix<bool>& m) {
                 result(0,itr++) = (*this)(i,j);
         }
     }
-
     return result;
 }
-
 
 /// SLICE OPERATION
 template<typename DATA>
@@ -1370,7 +1374,7 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
     }
 }
 
-//Set SubMatrix operation
+// setSubMatrix operation
 template<typename DATA>
 void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix<DATA>& subMatrix) {
     int n=this->rows();
@@ -1387,30 +1391,43 @@ void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix
         throw std::invalid_argument("setSubMatrix error raised - Wrong index range received. Check your index Params.");
     }
 }
-
 template<typename DATA>
 void matrix<DATA>::setSubMatrix(range rowRng, range colRng, const matrix<DATA>& subMatrix) {
     this->setSubMatrix(rowRng.start, rowRng.end, colRng.start, colRng.end, subMatrix);
 }
 
 /// TRANSPOSE OPERATION
-template<typename DATA>
+template<typename DATA> //applicable for const matrices
 matrix<DATA> matrix<DATA>::operator~() const {
     matrix<DATA> m(this->col, this->row);
 
-    //using insertAt operation to fill in the elements
     for(int i=0; i<m.row; ++i)
         for(int j=0; j<m.col; ++j)
             m.insertAt(*(val + (this->col)*j + i),i,j);
     return m;
 }
 
-/// TRANSPOSE OPERATION
+/// TRANSPOSE OPERATION 
 template<typename DATA>
 matrix<DATA> matrix<DATA>::transpose() {
     matrix m = ~(*this);
     return m;
 }
+
+
+template<typename DATA>
+matrix<DATA> matrix<DATA>::adjoint() {
+    matrix<DATA> m = ~(*this);
+    
+    if constexpr(std::is_class_v<DATA>)
+    if constexpr(std::is_same_v<DATA,std::complex<typename DATA::value_type>>) {
+        for(DATA* itr=m.begin(); itr != m.end(); ++itr)
+            (*itr).imag(-(*itr).imag());
+    }
+
+    return m;
+}
+
 
 /// Insertion Operations
 template<typename DATA>
@@ -1428,13 +1445,13 @@ void matrix<DATA>::insertAt(DATA value, int r, int c)  {
         if( (r>-1 && r < this->row) && (c>-1 && c<this->col)) {
             *(val + (this->col)*r + c) = value;
         } else {
-            throw std::invalid_argument("The index values exceed the dimension size of the matrix.");
+            throw std::invalid_argument("linear::matrix::insertAt() - The index values exceed the dimension size of the matrix.");
         }
 }
 template<typename DATA>
 void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
     if (r <0 || c < 0)
-        throw std::invalid_argument("Bad dimension values.");
+        throw std::invalid_argument("linear::matrix::updateWithArray() - Bad dimension values.");
 
     this->changeDims(r, c);
     std::copy(array, array + r*c, this->first);
@@ -1448,7 +1465,7 @@ void matrix<DATA>::display(const std::string msg)  const{
     std::cout<<'\n'<<msg<<'\n';
 
     // zero size matrix display
-    if(row == 0 || col == 0) {
+    if(row == 0 || col == 0 || first == NULL) {
         std::cout<<"(empty matrix)\n";
         return;
     }
@@ -1589,7 +1606,6 @@ matrix<DATA> diag(const matrix<DATA> &m1, int shift) {
     return m;
 }
 
-
 // Identity matrix of size n
 template<typename DATA>
 matrix<DATA> eye(int n) {
@@ -1641,7 +1657,6 @@ bool is_triangular(matrix<DATA>& M) {
     return (upper || lower);
 }
 
-
 // all data values 
 template<typename DATA>
 matrix<DATA> zeros(int n) {
@@ -1668,16 +1683,21 @@ matrix<double> zeros(int n, int m) {
     return _0s;
 }
 
-// zero matrix like another matrix]
+// zero matrix like another matrix
 template<typename DATA>
-matrix<double> zeros_like(const matrix<DATA>& m) {
-    matrix<double> _0s(m.rows(), m.cols(), 0);
+matrix<DATA> zeros_like(const matrix<DATA>& m) {
+    matrix<DATA> _0s(m.rows(), m.cols(), DATA(0.));
     return _0s;
 }
 template<typename DATA>
 matrix<DATA> matrix_like(const matrix<DATA>& m) {
     matrix<DATA> _0s(m.rows(), m.cols());
     return _0s;
+}
+template<typename DATA>
+matrix<DATA> ones_like(const matrix<DATA>& m) {
+    matrix<DATA> _1s(m.rows(), m.cols(), DATA(1.));
+    return _1s;
 }
 
 //all data type values for ones
@@ -2527,7 +2547,6 @@ matrix<double> tril(int size) {
 }
 /////////
 
-}//linear namespace
 
 template<typename DATA>
 void init2dArray(DATA *array, int size_0, int size_1) {
@@ -2610,5 +2629,6 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
 }
 
 
+}//linear namespace ends
 
 #endif // MATRIX_H

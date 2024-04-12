@@ -10,10 +10,11 @@ Be careful when dealing with `std::complex` matrices. Although I have tested the
 
 ## Parallelization and Optimization
 
+Memory alignment has been performed during memory allocation by aligning it based on the `DATA` parameter value of the matrix class template. This significantly helps improve certain algorithms/operations, especially the ones that are cache-friendly, such as `linear::matmul_block` (blocked matrix multiplication). Further enabling `-O3` optimization significantly speeds up operations.
+
 Matrix multiplication operation using OpenACC or OpenMP parallelization based on appropriate compiler flag used. If you do not use the flag, the compiler will by default ignore the parallelization directives added in the code and run sequentially.
 
-
-In case of `matmul_simd` function, for it to work you have to add in the extra `-mavx` flag alongwith `-fopenmp` flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
+In case of `matmul_simd` function, for it to work you have to add in the extra `-mavx`/`-mavx2` flag alongwith `-fopenmp`(optional but will reduce speed) flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
 On side note, `matmul_simd` performs worse than exclusive OpenMP parallelisation used in `&` and `matmul` operations but does job comparable to OpenMP when compared with the OpenACC parallelization.
 
 One more way to speed up operations is to use `-O3` optimization flag but I have not tested the value of the results on large matrices' operations. `matmul_simd` operation does not have any speedup through O3 optimization so it has not been benchmarked with it.

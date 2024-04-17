@@ -17,7 +17,7 @@ Matrix multiplication operation using OpenACC or OpenMP parallelization based on
 In case of `matmul_simd` function, for it to work you have to add in the extra `-mavx`/`-mavx2` flag alongwith `-fopenmp`(optional but will reduce speed) flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
 On side note, `matmul_simd` performs worse than exclusive OpenMP parallelisation used in `&` and `matmul` operations but does job comparable to OpenMP when compared with the OpenACC parallelization.
 
-One more way to speed up operations is to use `-O3` optimization flag but I have not tested the value of the results on large matrices' operations. `matmul_simd` operation does not have any speedup through O3 optimization so it has not been benchmarked with it.
+One more way to speed up operations is to use `-O3` optimization flag but I have not tested the value of the results on large matrices' operations. `matmul_simd` operation does not have much speedup through `O3` optimization so it has not been benchmarked with it.
 
 ### Commands
 Compiling using OpenMP:-

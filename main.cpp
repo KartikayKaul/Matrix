@@ -36,7 +36,7 @@ int main(int arg, char *argv[]) {
     //benchmarking matrix mul SIMD
     cout<<"\n\n STRASSEN'S MATRIX MUL BENCHMARKING";
     auto start2 = high_resolution_clock::now();
-    matrix<double> E = strassen_multiply(A,B);
+    matrix<double> E = strassen_multiply(A,B,128);
     auto end2 = high_resolution_clock::now();
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 

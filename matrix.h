@@ -53,6 +53,9 @@ struct is_complex : std::false_type {};
 template<typename DATA>
 struct is_complex<std::complex<DATA>> : std::true_type {};
 
+template<typename DATA>
+constexpr bool is_numeric_v = std::is_arithmetic_v<DATA> || is_complex<DATA>::value;
+
 // This has been added to be able to print the data type of the matrix
 template <typename T>
 struct TypeName { //defaulting case if i missed any numerical type
@@ -95,11 +98,14 @@ class matrix {
            - *first = points to the first location of the *val
            - *last = points to the last value in *val (*last <- *val + (row * col))
     */
-    static_assert(std::disjunction<std::is_arithmetic<DATA>, is_complex<DATA>>::value, "`matrix` class only supports numerical types.");
+    static_assert(is_numeric_v<DATA>, "`matrix` class only supports numerical types.");
     DATA *val;
     int row, col;
     DATA *first = NULL;
     DATA *last = NULL;
+
+    // itrs for chained-initialization (check operator<<)
+    int cur_row=0, cur_col=0;
 
     //deallocate memory for Val
     void delMemoryforVal() {
@@ -181,6 +187,12 @@ class matrix {
 
     /// Full Pivoting private method
     void pickPivotFullPivoting(int, int&, int&);
+    
+    // declaring class of different types as friend
+    template<typename ATAD>
+    friend class matrix;
+    /* enable private member access within the set
+    of matrix class template*/
 
     public:
          //// EXPERIMENTAL FUNCTIONS ////
@@ -190,7 +202,7 @@ class matrix {
          }
 
          //returns string of the type of the matrix
-         static constexpr const char* type_s() {
+         static constexpr  const char* type_s() {
             return TypeName<DATA>::value;
          }
 
@@ -244,7 +256,6 @@ class matrix {
          void fillTril(DATA value) {
             this->fillLowerTriangle(value);
          }
-
         //// EXPERIMENTAL ENDS ////
 
         // Getting matrix dimensions
@@ -344,7 +355,6 @@ class matrix {
         template<typename ATAD>
         matrix(const matrix<ATAD>& m) {
             this->getMemoryforVal(m.rows(), m.cols());
-
             for (int i = 0; i < this->row; ++i) {
                 for (int j = 0; j < this->col; ++j) {
                     if constexpr (std::is_same_v<ATAD, std::complex<DATA>>) {
@@ -354,6 +364,39 @@ class matrix {
                     }
                 }
             }
+        }
+
+        // Move constructor
+        matrix(matrix&& other) noexcept {
+            // Transfer ownership of resources from source to destination
+            this->val = std::move(other.val);
+            this->row = other.row;
+            this->col = other.col;
+            this->first = other.first;
+            this->last = other.last;
+
+            // Reset source to a valid state
+            other.val = NULL;
+            other.row = 0;
+            other.col = 0;
+            other.first = NULL;
+            other.last = NULL;
+        }
+        // Move constructor for handling different type matrices
+        template<typename ATAD>
+        matrix(matrix<ATAD>&& other) noexcept {
+            this->getMemoryforVal(other.rows(), other.cols());
+            for (int i = 0; i < this->row; ++i) {
+                for (int j = 0; j < this->col; ++j) {
+                    if constexpr (std::is_same_v<ATAD, std::complex<DATA>>) {
+                        *(val + this->col * i + j) = std::real(std::move(other(i, j)));
+                    } else if constexpr (!std::is_same_v<DATA, ATAD>) {
+                        *(val + this->col * i + j) = static_cast<DATA>(std::move(other(i, j)));
+                    }
+                }
+            }
+            // Reset source to a valid state
+            other.delMemoryforVal();
         }
 
         //initializer list
@@ -374,6 +417,11 @@ class matrix {
                 }
             }
         }
+
+        // Operator overloading for operator<< for chaining values into the matrix
+        matrix<DATA>& operator<<(const DATA& value);
+        template<typename ATAD, typename std::enable_if_t<is_numeric_v<ATAD>>>
+        matrix<DATA>& operator<<(const ATAD& value);
 
         // insert/update all the elements in row major form into the internal data structure
         void insertAll(int r=-1, int c=-1);
@@ -422,12 +470,10 @@ class matrix {
         matrix<DATA> &operator=(const matrix<ATAD>& m1) {
             this->changeDims(m1.rows(), m1.cols());
              if constexpr ( std::is_same_v<ATAD,std::complex<DATA>>) {
-                //this->changeDims(m1.rows(), m1.cols());
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = std::real(m1(i,j));
             } else if constexpr(!std::is_same_v<DATA, ATAD>) {
-                //this->changeDims(m1.rows(), m1.cols());
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = static_cast<DATA>(m1(i,j));
@@ -442,7 +488,7 @@ class matrix {
         matrix<DATA> operator~() const;
         matrix<DATA> transpose();
         matrix<DATA> T(){ return this->transpose();}
-
+        // Adjoint operation
         matrix<DATA> adjoint();
 
         /// Slice operation
@@ -451,6 +497,8 @@ class matrix {
 
         // Element-wise exponent operation
         matrix<DATA> operator^(int);
+        template<typename ATAD, typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        matrix<DATA> operator^(ATAD);
         
         /// Swap Operations
         void swapRows(int,int);
@@ -579,12 +627,12 @@ matrix<DATA> diagonal(int, DATA);
 template<typename DATA>
 matrix<DATA> diag(const matrix<DATA>&, int shift=0);
 
-matrix<double> upper_triangle_matrix(int);
-matrix<double> lower_triangle_matrix(int);
-matrix<double> utm(int);
-matrix<double> ltm(int);
-matrix<double> triu(int);
-matrix<double> tril(int);
+matrix<double> upper_triangle_matrix(int, double mean=0., double std=1.);
+matrix<double> lower_triangle_matrix(int, double mean=0., double std=1.);
+matrix<double> utm(int, double mean=0., double std=1.);
+matrix<double> ltm(int, double mean=0., double std=1.);
+matrix<double> triu(int, double mean=0., double std=1.);
+matrix<double> tril(int, double mean=0., double std=1.);
 
 template<typename DATA>
 bool is_triangular(matrix<DATA>&);
@@ -658,6 +706,7 @@ matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
     }
 
     matrix<DATA> reshapedMatrix(newRow, newCol);
+    #pragma omp parallel for if(this->cols() >= 100 || this->rows() >= 100)
     for(int i=0; i< ((this->cols()) * (this->rows())); ++i ) {
         reshapedMatrix(i/newCol, i%newCol) = val[i];
     }
@@ -1264,16 +1313,58 @@ double matrix<DATA>::det(bool fullPivot) {
     return detValue;
 }
 
+// Operator overloading for operator<< for chaining values into the matrix
+template<typename DATA>
+matrix<DATA>& matrix<DATA>::operator<<(const DATA& value) {
+    if(cur_row >= row || cur_col >= col)
+        throw std::out_of_range("operator<< - Index out of range. Matrix is filled.");
+    
+    this->val[cur_row*col + cur_col++] = value;
+    if(cur_col == col) {
+        cur_col = 0;
+        ++cur_row;
+    }
+    return *this;
+}
+
+template<typename DATA>
+template<typename ATAD, typename std::enable_if_t<is_numeric_v<ATAD>>>
+matrix<DATA>& matrix<DATA>::operator<<(const ATAD& value) {
+    if(cur_row >= row || cur_col >= col)
+        throw std::out_of_range("operator<< - Index out of range. Matrix is filled.");
+    
+    if constexpr(std::is_same_v<std::complex<DATA>, std::decay_t<ATAD>>) {
+        this->val[cur_row*col + cur_col++] = std::real(value);
+    } else {
+        this->val[cur_row*col + cur_col++] = static_cast<DATA>(value);
+    }
+    if(cur_col == col) {
+        cur_col = 0;
+        ++cur_row;
+    }
+    return *this;
+}
+
 /// ELEMENT-WISE EXPONENT OPERATION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator^(int power) {
     matrix<DATA> m(this->row, this->col);
-
     for(int i=0; i<m.rows(); ++i) {
         for(int j=0; j<m.cols(); ++j) {
             DATA prod=1.;
             prod = std::pow(*(val + i*(this->col) + j), power);
             m(i,j) = prod;
+        }
+    }
+    return m;
+}
+template<typename DATA>
+template<typename ATAD, typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+matrix<DATA> matrix<DATA>::operator^(ATAD power) {
+    matrix<DATA> m(this->row, this->col);
+    for(int i=0; i<m.rows(); ++i) {
+        for(int j=0; j<m.cols(); ++j) {
+            m(i,j) = std::pow(val[i*col +j],power);
         }
     }
     return m;
@@ -1388,7 +1479,7 @@ void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix
             }
         }
     } else {
-        throw std::invalid_argument("setSubMatrix error raised - Wrong index range received. Check your index Params.");
+        throw std::invalid_argument("linear::matrix::setSubMatrix - Wrong range indices received. Check your arguments.");
     }
 }
 template<typename DATA>
@@ -1414,20 +1505,17 @@ matrix<DATA> matrix<DATA>::transpose() {
     return m;
 }
 
-
+/// Adjoint of matrix
 template<typename DATA>
 matrix<DATA> matrix<DATA>::adjoint() {
     matrix<DATA> m = ~(*this);
-    
-    if constexpr(std::is_class_v<DATA>)
-    if constexpr(std::is_same_v<DATA,std::complex<typename DATA::value_type>>) {
-        for(DATA* itr=m.begin(); itr != m.end(); ++itr)
-            (*itr).imag(-(*itr).imag());
-    }
-
+    if constexpr(std::is_class_v<DATA>) // necessary to make this check for a class type
+        if constexpr(std::is_same_v<DATA,std::complex<typename DATA::value_type>>) {
+            for(DATA* itr=m.begin(); itr != m.end(); ++itr)
+                (*itr).imag(-(*itr).imag());
+        }
     return m;
 }
-
 
 /// Insertion Operations
 template<typename DATA>
@@ -1472,7 +1560,7 @@ void matrix<DATA>::display(const std::string msg)  const{
 
     int max_precision = MATRIX_PRECISION;
     int padding = 1;
-    
+    int maxDigits = 1;
     // if it is a bool matrix use different logic
     if constexpr(std::is_same_v<DATA,bool>) {
         for(int i=0; i<rows(); i++) {
@@ -1480,9 +1568,26 @@ void matrix<DATA>::display(const std::string msg)  const{
                 std::cout << std::setw(5)<< std::boolalpha << (*(val + (col) * i + j)) << " ";
             std::cout<<std::endl;
         }
+    } else if constexpr(std::is_integral_v<DATA>) {
+            padding = 0;
+            for (i = 0; i < rows(); ++i) {
+                for (j = 0; j < cols(); ++j) {
+                    std::stringstream stream;
+                    stream << *(val + (col) * i + j);
+                    std::string str = stream.str();
+                    maxDigits = std::max(maxDigits, static_cast<int>(str.length()));
+                }
+            }
+            // Set the width based on the maximum number of digits
+            int width = maxDigits + padding;
+            for (i = 0; i < rows(); ++i) {
+                for (j = 0; j < cols(); ++j) {
+                    std::cout << std::setw(width) << *(val + (col) * i + j) << " ";
+                }
+                std::cout << "\n";
+            }
     } else {
         // Find the maximum number of digits in the matrix
-        int maxDigits = 1;
         for (i = 0; i < rows(); ++i) {
             for (j = 0; j < cols(); ++j) {
                 std::stringstream stream;
@@ -2243,13 +2348,13 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     
     int i, j, k;
     matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
-    if (m1.rows() >= 256 || m1.cols() >= 256 || m2.cols() >= 256) {
+    if (m1.rows() >= 100 || m1.cols() >= 100 || m2.cols() >= 100) {
         #ifdef _OPENACC
         //std::cout<<"Using OpenACC for parallelization\n";
         #pragma acc parallel loop gang private(i, j, k) present(m1, m2, m)
         #else
         //std::cout<<"Using OpenMP for parallelization\n";
-        #pragma omp parallel for private(i,j,k) shared(m1, m2, m)
+        #pragma omp parallel for  collapse(2) private(i,j,k) shared(m1, m2, m)
         #endif
         for(i=0; i<m1.rows(); ++i) {
             for(k=0; k<m2.rows(); ++k) {
@@ -2262,7 +2367,7 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
                     m(i,j) += m1(i,k) * m2(k,j);
             }
         } //i-loop
-        return m;
+        return std::move(m);
     }
     else {
         for(i=0; i<m1.rows(); ++i)
@@ -2270,12 +2375,12 @@ matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
                 for(j=0; j<m2.cols(); ++j)
                     m(i,j) += m1(i,k) * m2(k,j);
         
-        return m;
+        return std::move(m);
     }
 } 
 template<typename DATA>
 matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    return m1&m2;
+    return std::move(m1&m2);
 }
 
 template<typename DATA>
@@ -2289,11 +2394,11 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
     const int p = m2.cols();
 
     matrix<DATA> result(m, p, (DATA)0);
-
-    #pragma omp parallel for collapse(2)
-    for (int i = 0; i < m; i += block_size) {
-        for (int k = 0; k < p; k += block_size) {
-            for (int j = 0; j < n; j += block_size) {
+    int i,j,k;
+    #pragma omp parallel for collapse(2) private(i,j,k) shared(m1, m2, result)
+    for ( i = 0; i < m; i += block_size) {
+        for ( k = 0; k < p; k += block_size) {
+            for ( j = 0; j < n; j += block_size) {
                 // Compute block multiplication
                 for (int ii = i; ii < std::min(i + block_size, m); ++ii) {
                     for (int kk = k; kk < std::min(k + block_size, p); ++kk) {
@@ -2309,7 +2414,7 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
         }
     }
 
-    return result;
+    return std::move(result);
 }
 
 template<typename DATA>
@@ -2326,7 +2431,7 @@ matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
     // Call BLAS function for matrix-matrix multiplication
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, A.begin(), k, B.begin(), n, 0.0, C.begin(), n);
 
-    return C;
+    return std::move(C);
 }
 
 matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
@@ -2363,7 +2468,7 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
                  result(i, j) = _mm256_cvtsd_f64(sum);
             }
         }
-        return result;
+        return std::move(result);
     #else
         throw std::runtime_error("linear::matmul_simd - SIMD instructions never compiled. See if you used `-mavx` flag.");
     #endif
@@ -2426,7 +2531,7 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     result.setSubMatrix(newSize, n, newSize, n, C22);
 
     // Return the final result
-    return result;
+    return std::move(result);
 }
 
 // Parallelized Strassen's algorithm for multiplying square matrices
@@ -2493,20 +2598,19 @@ matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int ba
     result.setSubMatrix(newSize, n, 0, newSize, C21);
     result.setSubMatrix(newSize, n, newSize, n, C22);
 
-    return result;
+    return std::move(result);
 }
 
 /// TRIANGULAR MATRIX GENERATORS ///
-matrix<double> upper_triangle_matrix(int size) {
-    if(size <= 0)
+matrix<double> upper_triangle_matrix(int size, double mean, double std) {
+    if(size < 1)
         throw std::invalid_argument("size is less than 1.");
     
     matrix<double> result(size,size,0.);
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    
-    std::normal_distribution<double> distribution(0.,1.);
+    std::normal_distribution<double> distribution(mean, std);
     
     for(int i=0; i<size; ++i) {
         for(int j=i; j<size; ++j) {
@@ -2516,21 +2620,21 @@ matrix<double> upper_triangle_matrix(int size) {
 
     return result;
 }
-matrix<double> utm(int size) {
-    return upper_triangle_matrix(size);
+matrix<double> utm(int size, double mean, double std) {
+    return upper_triangle_matrix(size, mean, std);
 }
-matrix<double> triu(int size) {
-    return upper_triangle_matrix(size);
+matrix<double> triu(int size, double mean, double std) {
+    return upper_triangle_matrix(size, mean, std);
 }
 
-matrix<double> lower_triangle_matrix(int size) {
-    if(size<=0)
+matrix<double> lower_triangle_matrix(int size, double mean, double std) {
+    if(size<1)
         throw std::invalid_argument("size is less than 1.");
 
     matrix<double> result(size,size,0.);
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::normal_distribution<double> distribution(0.,1.);
+    std::normal_distribution<double> distribution(mean, std);
     
     for(int i=0; i<size; ++i) {
         for(int j=0; j<=i && j<size; ++j) {
@@ -2539,11 +2643,11 @@ matrix<double> lower_triangle_matrix(int size) {
     }
     return result;
 }
-matrix<double> ltm(int size) {
-    return lower_triangle_matrix(size);
+matrix<double> ltm(int size, double mean, double std) {
+    return lower_triangle_matrix(size, mean, std);
 }
-matrix<double> tril(int size) {
-    return lower_triangle_matrix(size);
+matrix<double> tril(int size, double mean, double std) {
+    return lower_triangle_matrix(size, mean, std);
 }
 /////////
 

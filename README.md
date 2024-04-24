@@ -8,6 +8,7 @@ Matrix library is makes use of matrix class template so we can have matrix eleme
 
 Be careful when dealing with `std::complex` matrices. Although I have tested the library with complex matrices and it works fine in many cases but when it comes to performing operations where type conversion might occur, due to there being explicit conversion or implicit, some errors may arise. Moreover, I am actively taking into consideration adding safety measures to handle such cases and accomodate operations for complex numerical operations with the matrices.
 
+
 ## Parallelization and Optimization
 
 Memory alignment has been performed during memory allocation by aligning it based on the `DATA` parameter value of the matrix class template. This significantly helps improve certain algorithms/operations, especially the ones that are cache-friendly, such as `linear::matmul_block` (blocked matrix multiplication). Further enabling `-O3` optimization significantly speeds up operations.
@@ -19,6 +20,7 @@ On side note, `matmul_simd` performs worse than exclusive OpenMP parallelisation
 
 One more way to speed up operations is to use `-O3` optimization flag but I have not tested the value of the results on large matrices' operations. `matmul_simd` operation does not have much speedup through `O3` optimization so it has not been benchmarked with it.
 
+Point to note is that I have tested it only on gcc compiler. Optimizations on other compilers such as icx have not been tested. In near future, I will also test this on MSVC and ICC as well. Currently plan is to make the code as portable as possible and make use of `std` functions to achieve so if possible.
 ### Commands
 Compiling using OpenMP:-
 ```bash

@@ -5,7 +5,6 @@
 #include<iostream>
 #include<cstdlib>
 #include<omp.h>
-#include<openacc.h>
 #include<stdexcept>
 #include<fstream>
 #include<random>
@@ -17,8 +16,7 @@
 #include<type_traits>
 #include<x86intrin.h>
 #include<cblas.h>
-
-// testing
+//testing
 #include<algorithm>
 
 namespace linear{
@@ -53,7 +51,7 @@ struct is_complex : std::false_type {};
 template<typename DATA>
 struct is_complex<std::complex<DATA>> : std::true_type {};
 
-template<typename DATA>
+template<typename DATA> //whether it is qualified to be a matrix value
 constexpr bool is_numeric_v = std::is_arithmetic_v<DATA> || is_complex<DATA>::value;
 
 // This has been added to be able to print the data type of the matrix
@@ -88,7 +86,7 @@ DEFINE_TYPENAME_FOR_TYPE(std::complex<int>)
 DEFINE_TYPENAME_FOR_TYPE(std::complex<float>)
 DEFINE_TYPENAME_FOR_TYPE(std::complex<long double>)
 
-template<typename DATA>
+template<typename DATA=double>
 class matrix {
     /*  
         DATA MEMBERS:- (- private; + public)
@@ -99,7 +97,7 @@ class matrix {
            - *last = points to the last value in *val (*last <- *val + (row * col))
     */
     static_assert(is_numeric_v<DATA>, "`matrix` class only supports numerical types.");
-    DATA *val;
+    alignas(alignof(DATA)) DATA *val;
     int row, col;
     DATA *first = NULL;
     DATA *last = NULL;
@@ -110,50 +108,21 @@ class matrix {
     //deallocate memory for Val
     void delMemoryforVal() {
         if (this->rows() > 0 && this->cols() > 0) {
-            this->first = NULL;
-
-    #ifdef _POSIX_VERSION
-            // Deallocate memory using free if posix_memalign is available
-            free(this->val);
-    #else
-            // Use delete[] for deallocation if posix_memalign is not available
             delete[] this->val;
-    #endif
-
             this->val = NULL;
         }
-}
+    }
 
     // memory allocation for internal data structure holding the values
     void getMemoryforVal(int r, int c) {
         if(r<1 || c<1)
             throw std::invalid_argument("getMemoryforVal() - invalid dimension values.");
-        
-        // Get alignment requirement for `DATA` type
-        constexpr std::size_t alignment = alignof(DATA); 
-
-        // Allocate memory with alignment
         try {
-            void* aligned_ptr;
-            #ifdef _POSIX_VERSION
-                // POSIX platforms (Linux, Unix, macOS)
-                if (posix_memalign(&aligned_ptr, alignment, sizeof(DATA) * r * c) != 0) {
-                    throw std::bad_alloc(); // posix_memalign failed
-                }
-            #else
-                // Non-POSIX platforms
-                aligned_ptr = std::aligned_alloc(alignment, sizeof(DATA) * r * c);
-                if (aligned_ptr == nullptr) {
-                    throw std::bad_alloc(); // std::aligned_alloc failed
-                }
-            #endif
-                // Assign aligned memory to val
-                this->val = static_cast<DATA*>(aligned_ptr);
+            val = new DATA[r*c];
         } catch (const std::bad_alloc& e) {
             std::cerr << "Heap memory allocation failed: " << e.what() << "\n";
             throw;
         }
-
         this->row = r;
         this->col = c;
 
@@ -176,9 +145,8 @@ class matrix {
     
     // validate the index
     bool isValidIndex(int r, int c) const {
-        matrix<int> dims = getDims();
-        int nRows = dims(0,0);
-        int nCols = dims(0,1);
+        int nRows = this->rows();
+        int nCols = this->cols();
         return r >= 0 && r < nRows && c >= 0 && c < nCols;
     }
 
@@ -198,7 +166,7 @@ class matrix {
          //// EXPERIMENTAL FUNCTIONS ////
          //print the type of matrix in console
          void print_type() {
-            std::cout<<std::endl<<TypeName<DATA>::value<<std::endl;
+            std::cout<<'\n'<<TypeName<DATA>::value<<'\n';
          }
 
          //returns string of the type of the matrix
@@ -266,7 +234,6 @@ class matrix {
            matrix<int> Dims(1,2);
            Dims(0,0) = this->row;
            Dims(0,1) = this->col;
-           
            return Dims;
         }
 
@@ -280,7 +247,6 @@ class matrix {
                 It will reshape the matrix and
                 remove old data and reallocate
                 memory for new data.
-                Use with caution.
                 This is different than the reshape function.
                 Reshape function does not delete the values 
                 of original matrix. Infact it creates a new 
@@ -290,18 +256,18 @@ class matrix {
            this->getMemoryforVal(r, c);
         }
 
-        // initialize empty matrix
+        // initialize empty matrix, trivial
         matrix() {
             this->row = this->col = 0;
             this->first = this->last = NULL;
         }
 
-        // initialize a square matrix
+        // initialize a square matrix, semi-init (lifetime hasn't started yet)
         matrix(int n) {
             getMemoryforVal(n,n);
         }
 
-        // initialize a rectangular matrix
+        // initialize a rectangular matrix, semi-init (lifetime hasn't started yet)
         matrix(int row, int col) {
             getMemoryforVal(row,col);
         }
@@ -334,6 +300,7 @@ class matrix {
             getMemoryforVal(data.size(), data[0].size());
 
             int stride = 0;
+            #pragma omp parallel for if(this->rows() >= 100)
             for(int i=0; i<this->rows(); ++i) {
                 std::copy(data[i].begin(), data[i].end(), val + stride);
                 stride += this->cols();
@@ -355,11 +322,15 @@ class matrix {
         template<typename ATAD>
         matrix(const matrix<ATAD>& m) {
             this->getMemoryforVal(m.rows(), m.cols());
+
+            #pragma omp parallel for if(m.rows() >= 64 || m.cols() >= 64)
             for (int i = 0; i < this->row; ++i) {
                 for (int j = 0; j < this->col; ++j) {
-                    if constexpr (std::is_same_v<ATAD, std::complex<DATA>>) {
-                        *(val + this->col * i + j) = std::real(m(i, j));
-                    } else if constexpr (!std::is_same_v<DATA, ATAD>) {
+                    if constexpr(std::is_class_v<ATAD>) {
+                        if constexpr (std::is_same_v<ATAD, std::complex<typename ATAD::value_type>>) {
+                            *(val + this->col * i + j) = static_cast<DATA>(std::real(m(i, j)));
+                        } 
+                    }   else if constexpr (!std::is_same_v<DATA, ATAD>) {
                         *(val + this->col * i + j) = static_cast<DATA>(m(i, j));
                     }
                 }
@@ -386,10 +357,16 @@ class matrix {
         template<typename ATAD>
         matrix(matrix<ATAD>&& other) noexcept {
             this->getMemoryforVal(other.rows(), other.cols());
+
+            #pragma omp parallel for if(other.rows() >= 100 || other.cols() >= 100)
             for (int i = 0; i < this->row; ++i) {
                 for (int j = 0; j < this->col; ++j) {
-                    if constexpr (std::is_same_v<ATAD, std::complex<DATA>>) {
-                        *(val + this->col * i + j) = std::real(std::move(other(i, j)));
+                    if constexpr(std::is_class_v<ATAD>) {
+                        if constexpr (std::is_same_v<ATAD, std::complex<typename ATAD::value_type>>) {
+                            *(val + this->col * i + j) = static_cast<DATA>(std::real(std::move(other(i, j))));
+                        } else if constexpr(std::is_same_v<ATAD,std::complex<DATA>>) {
+                            *(val + this->col * i + j) = std::real(std::move(other(i, j)));
+                        }
                     } else if constexpr (!std::is_same_v<DATA, ATAD>) {
                         *(val + this->col * i + j) = static_cast<DATA>(std::move(other(i, j)));
                     }
@@ -441,7 +418,7 @@ class matrix {
 
         void iota(int start=int());
 
-        ~matrix() {
+        ~matrix() noexcept {
             this->delMemoryforVal();
         }
 
@@ -456,8 +433,8 @@ class matrix {
         matrix<DATA> &operator/=(const ATAD);
     
         // Index operator
-        DATA& operator()(const int, const int);
-        const DATA& operator()(const int, const int) const;
+        inline  DATA& operator()(const int, const int);
+        inline const DATA& operator()(const int, const int) const;
         matrix<DATA> operator()(const matrix<bool>&);
 
         //Assignment operator
@@ -470,10 +447,12 @@ class matrix {
         matrix<DATA> &operator=(const matrix<ATAD>& m1) {
             this->changeDims(m1.rows(), m1.cols());
              if constexpr ( std::is_same_v<ATAD,std::complex<DATA>>) {
+                #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = std::real(m1(i,j));
             } else if constexpr(!std::is_same_v<DATA, ATAD>) {
+                #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = static_cast<DATA>(m1(i,j));
@@ -569,55 +548,55 @@ template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
+matrix<DATA> operator&(const matrix<DATA>&, const matrix<DATA>&);
+
+template<typename DATA>
 matrix<bool> operator==(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+         typename  std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const matrix<DATA>&, const ATAD);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator==(const ATAD,const matrix<DATA>&);
 
 template<typename DATA>
 matrix<bool> operator<(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator<(const matrix<DATA>&, const ATAD);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator<(const ATAD,const matrix<DATA>&);
 
 template<typename DATA>
 matrix<bool> operator>(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator>(const matrix<DATA>&, const ATAD);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator>(const ATAD,const matrix<DATA>&);
 
 template<typename DATA>
 matrix<bool> operator<=(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator<=(const matrix<DATA>&, const ATAD);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator<=(const ATAD,const matrix<DATA>&);
 
 template<typename DATA>
 matrix<bool> operator>=(const matrix<DATA>&, const matrix<DATA>&);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator>=(const matrix<DATA>&, const ATAD);
 template<typename DATA, typename ATAD,\
-         typename = std::enable_if_t<std::is_arithmetic_v<ATAD>>>
+        typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<bool> operator>=(const ATAD,const matrix<DATA>&);
 
 template<typename DATA, typename ATAD>
 matrix<DATA> operator/(const matrix<DATA>&, const ATAD);
-
-template<typename DATA>
-matrix<DATA> operator&(const matrix<DATA>&, const matrix<DATA>&);
 
 template<typename DATA>
 matrix<DATA> eye(int);
@@ -657,9 +636,9 @@ matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
 matrix<int> randomUniformInt(int, int, int);
 matrix<int> randomUniformInt(int, int, int, int);
 
-template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
 matrix<DATA> randomNormal(int, DATA mean=0., DATA std=1.);
-template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
 matrix<DATA> randomNormal(int, int, DATA mean=0., DATA std=1.);
 
 matrix<double> randomNormal(int, int, double mean=0., double std=1.);
@@ -694,6 +673,7 @@ void matrix<DATA>::iota(int start) {
     if(this->rows() < 1 || this->cols() < 1)
         throw std::out_of_range("matrix is an empty matrix. Inflate it with memory first.");
     
+    #pragma omp parallel for if(this->rows() >= 100 || this->cols() >= 100)
     for(DATA* itr = this->first; itr != this->last; ++itr)
         *itr = start++;
 }
@@ -735,6 +715,7 @@ void matrix<DATA>::swapRows(int row1, int row2) {
         throw std::invalid_argument("Row dim indices are wrong.\n");
         return;
     }
+    #pragma omp parallel for if(this->cols() >= 100)
     for(int j=0; j<col; ++j) {
         DATA temp = *(val + row1*col + j);
         *(val + row1*col + j) = *(val + row2*col + j);
@@ -747,6 +728,8 @@ void matrix<DATA>::swapCols(int col1, int col2) {
         throw std::invalid_argument("Column dim indices are wrong.\n");
         return;
     }
+
+    #pragma omp parallel for if(this->rows() >= 100)
     for (int i = 0; i<row; ++i) {
         DATA temp = *(val + i*col + col1);
         *(val + i*col + col1) = *(val + i*col + col2);
@@ -1236,9 +1219,8 @@ double matrix<DATA>::det(bool fullPivot) {
     }
 
     // get dimensions
-    matrix<int> dims = this->getDims();
-    int n = dims(0,0); //rows
-    int m = dims(0,1); //cols
+    int n = rows(); //rows
+    int m = cols(); //cols
     
     matrix<DATA> this_copy(this->val, n, m); //copy of this
     double detValue = 1.0;
@@ -1349,6 +1331,7 @@ matrix<DATA>& matrix<DATA>::operator<<(const ATAD& value) {
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator^(int power) {
     matrix<DATA> m(this->row, this->col);
+    #pragma omp parallel for collapse(2) if(this->rows()>=100 || this->cols() >= 100)
     for(int i=0; i<m.rows(); ++i) {
         for(int j=0; j<m.cols(); ++j) {
             DATA prod=1.;
@@ -1362,6 +1345,8 @@ template<typename DATA>
 template<typename ATAD, typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
 matrix<DATA> matrix<DATA>::operator^(ATAD power) {
     matrix<DATA> m(this->row, this->col);
+
+    #pragma omp parallel for collapse(2) if(this->rows()>=100 || this->cols() >=100)
     for(int i=0; i<m.rows(); ++i) {
         for(int j=0; j<m.cols(); ++j) {
             m(i,j) = std::pow(val[i*col +j],power);
@@ -1372,19 +1357,19 @@ matrix<DATA> matrix<DATA>::operator^(ATAD power) {
 
 /// INDEX OPERATION
 template<typename DATA>
-DATA& matrix<DATA>::operator()(const int r,const int c)  {
-    if (r >= 0 && r < this->rows()  && c >= 0 && c < this->cols()) {
+inline  DATA& matrix<DATA>::operator()(const int r, const int c)  {
+    if(r >=0 && r < this->rows()  && c >= 0 && c < this->cols()) {
         return *(val + r*this->col + c);
     } else {
-        throw std::invalid_argument("Indices exceed the dimension size.");
+        throw std::out_of_range("linear::matrix::operator() - matrix indices out of range.");
     }
 }
 template<typename DATA>
-const DATA& matrix<DATA>::operator()(const int r, const int c) const {
-    if(r >= 0 && r < this->rows()  && c >= 0 && c < this->cols()) {
+inline const DATA& matrix<DATA>::operator()(const int r, const int c) const {
+    if(r >=0 && r < this->rows()  && c >= 0 && c < this->cols()) {
         return *(val + r*this->col + c);
     } else {
-        throw std::invalid_argument("Indices exceed the dimension size.");
+        throw std::out_of_range("linear::matrix::operator() - matrix indices out of range.");
     }
 }
 template<typename DATA>
@@ -1473,8 +1458,10 @@ void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix
     bool validation1 = (this->validateParams(x_0, y_0, n)) && (this->validateParams(x_1, y_1, m));
     //bool validation2 = !((y_0 - x_0  != n) || (y_1 - x_1 != m)); 
     if (validation1) {
-        for (int i = x_0; i < y_0; ++i) {
-            for (int j = x_1; j < y_1; ++j) {
+        int i,j;
+        #pragma omp parallel for collapse(2) 
+        for (i = x_0; i < y_0; ++i) {
+            for (j = x_1; j < y_1; ++j) {
                 (*this)(i, j) = subMatrix(i - x_0, j - x_1);
             }
         }
@@ -1494,7 +1481,7 @@ matrix<DATA> matrix<DATA>::operator~() const {
 
     for(int i=0; i<m.row; ++i)
         for(int j=0; j<m.col; ++j)
-            m.insertAt(*(val + (this->col)*j + i),i,j);
+            m(i,j) = *(val + j*col + i);
     return m;
 }
 
@@ -1553,7 +1540,7 @@ void matrix<DATA>::display(const std::string msg)  const{
     std::cout<<'\n'<<msg<<'\n';
 
     // zero size matrix display
-    if(row == 0 || col == 0 || first == NULL) {
+    if(this->rows() == 0 || this->cols() == 0 ) {
         std::cout<<"(empty matrix)\n";
         return;
     }
@@ -1566,7 +1553,7 @@ void matrix<DATA>::display(const std::string msg)  const{
         for(int i=0; i<rows(); i++) {
             for(int j=0; j<cols();j++)
                 std::cout << std::setw(5)<< std::boolalpha << (*(val + (col) * i + j)) << " ";
-            std::cout<<std::endl;
+            std::cout<<'\n';
         }
     } else if constexpr(std::is_integral_v<DATA>) {
             padding = 0;
@@ -1715,6 +1702,7 @@ matrix<DATA> diag(const matrix<DATA> &m1, int shift) {
 template<typename DATA>
 matrix<DATA> eye(int n) {
     matrix<DATA> m(n);
+    #pragma omp parallel for collapse(2) if(n>=100)
     for(int i=0; i<n; ++i)
         for(int j=0; j<n; ++j) {
             if(i == j) {
@@ -1732,9 +1720,8 @@ bool is_triangular(matrix<DATA>& M) {
     if(!M.isSquare()) {
         throw std::invalid_argument("The matrix is not square.");
     }
-    matrix<int> dims = M.getDims();
-    int n = dims(0, 0);
-    int m = dims(0, 1);
+    int n = M.rows();
+    int m = M.cols();
 
     // machine epsilon
     DATA epsilon = std::numeric_limits<DATA>::epsilon();
@@ -1861,9 +1848,6 @@ matrix<double> randomUniform(int n, int m, double minVal, double maxVal) {
     return mat;
 }
 
-//general function template for 
-
-
 // random integer square matrix
 matrix<int> randomUniformInt(int n, int minVal, int maxVal) {
     matrix<int> mat(n);
@@ -1880,7 +1864,6 @@ matrix<int> randomUniformInt(int n, int minVal, int maxVal) {
     return mat;
 }
 
-
 // random integer nxm matrix
 matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
     matrix<int> mat(n,m);
@@ -1893,7 +1876,6 @@ matrix<int> randomUniformInt(int n, int m, int minVal, int maxVal) {
         for(int j=0; j<m; ++j)
             mat(i,j) = distribution(generator);
     }
-
     return mat;
 }
 
@@ -1927,7 +1909,7 @@ matrix<double> randomNormal(int n, int m, double mean, double std) {
 }
 
 // random nxm matrix from normal distribution
-template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
 matrix<DATA> randomNormal(int n, int m, DATA mean, DATA std) {
     matrix<DATA> mat(n,m);
 
@@ -1943,7 +1925,7 @@ matrix<DATA> randomNormal(int n, int m, DATA mean, DATA std) {
 }
 
 // random nxn matrix from normal distribution
-template<typename DATA, typename = std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
 matrix<DATA> randomNormal(int n, DATA mean, DATA std) {
     matrix<DATA> mat(n);
 
@@ -1977,6 +1959,8 @@ matrix<DATA> &matrix<DATA>::operator*=(const ATAD value) {
     } else {
         newVal = static_cast<DATA>(value);
     }
+
+    #pragma omp parallel for if(row*col >= 100)
     for(int i=0; i < row*col; ++i)
         *(val + i) *= newVal;
     return *this;
@@ -1990,6 +1974,7 @@ matrix<DATA> &matrix<DATA>::operator/=(const ATAD value) {
     } else {
         newVal = static_cast<DATA>(value);
     }
+    #pragma omp parallel for if(row*col >= 100)
     for(int i=0; i < row*col; ++i)
         *(val + i) /= newVal;
     return *this;
@@ -2000,6 +1985,7 @@ matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
     if(!this->isComparable(m1))
         throw std::invalid_argument("Dimensions do not match.");
     else {
+        #pragma omp parallel for if(row*col >= 100)
         for(int i=0; i<this->rows()*this->cols(); ++i)
             *(val + i) -= m1(i/m1.cols(), i%m1.cols());
     }
@@ -2007,6 +1993,8 @@ matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
 }
 template<typename DATA>
 matrix<DATA> &matrix<DATA>::operator-=(const DATA value) {
+
+    #pragma omp parallel for if(row*col >= 100)
     for(int i=0; i<this->rows()*this->cols(); ++i)
         *(val + i) -= value;
     return *this;
@@ -2046,6 +2034,7 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::invalid_argument("Corresponding dimensions do not match for element-wise multiplication.");
     }
     matrix<DATA> product(m1.rows(), m1.cols(), (DATA)1);
+    #pragma omp parallel for if(m1.rows()*m1.cols() >= 100)
     for(int i=0; i<m1.rows()*m1.cols(); ++i){
         product(i/m1.cols(), i%m1.cols()) *= (m1(i/m1.cols(), i%m1.cols()) * m2(i/m2.cols(), i%m2.cols()));
     }
@@ -2059,10 +2048,10 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     matrix<bool> res(m1.rows(), m1.cols(), true);
 
     #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
-    for(int i=0; i<m1.rows(); i++)
-        for(int j=0; j<m1.cols(); j++)
-            if(std::abs(m1(i,j) - m2(i,j)) > PRECISION_TOL(DATA) )
-                res(i,j) = false;
+    for(int i=0; i<m1.rows(); ++i)
+        for(int j=0; j<m1.cols(); ++j)
+                if(std::abs(m1(i,j) - m2(i,j)) > PRECISION_TOL(DATA) )
+                res(i,j) = false;    
     return res;
 }
 template<typename DATA, typename ATAD,\
@@ -2274,21 +2263,70 @@ matrix<bool> operator<=(const ATAD value, const matrix<DATA>& m1) {
 }
 
 template<typename DATA>
-matrix<DATA> &matrix<DATA>::operator+=(const matrix<DATA>& m1) {
-    if(!this->isComparable(m1))
+matrix<DATA>& matrix<DATA>::operator+=(const matrix<DATA>& m1) {
+    if (!this->isComparable(m1))
         throw std::invalid_argument("Dimensions do not match.");
     else {
-        #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
-        for(int i=0; i<this->rows()*this->cols(); ++i)
-            *(val + i) += m1(i/m1.cols(), i%m1.cols());
+        int Size = this->rows() * this->cols();
+
+        #ifdef __AVX__
+        if constexpr (std::is_same_v<DATA, float>) {
+            for (int i = 0; i < Size; i += 8) {
+                __m256 vec1 = _mm256_loadu_ps(this->val + i);
+                __m256 vec2 = _mm256_loadu_ps(&m1(i / m1.cols(), i % m1.cols()));
+                vec1 = _mm256_add_ps(vec1, vec2);
+                _mm256_storeu_ps(this->val + i, vec1);
+            }
+        } else if constexpr (std::is_same_v<DATA, double>) {
+            for (int i = 0; i < Size; i += 4) {
+                __m256d vec1 = _mm256_loadu_pd(this->val + i);
+                __m256d vec2 = _mm256_loadu_pd(&m1(i / m1.cols(), i % m1.cols()));
+                vec1 = _mm256_add_pd(vec1, vec2);
+                _mm256_storeu_pd(this->val + i, vec1);
+            }
+        } else {
+            
+            for (int i = 0; i < Size; ++i)
+                *(this->val + i) += m1(i / m1.cols(), i % m1.cols());
+        }
+        #else
+       
+        for (int i = 0; i < Size; ++i)
+            *(this->val + i) += m1(i / m1.cols(), i % m1.cols());
+        #endif
     }
     return *this;
 }
 template<typename DATA>
-matrix<DATA> &matrix<DATA>::operator+=(const DATA value) {
-    for(int i=0; i<this->rows()*this->cols(); ++i) {
-            *(val + i) += value;
+matrix<DATA>& matrix<DATA>::operator+=(const DATA value) {
+    int Size = this->rows() * this->cols();
+
+    #ifdef __AVX__
+    if constexpr (std::is_same_v<DATA, float>) {
+        for(int i=0; i<Size; i+=8) {
+            __m256 vec = _mm256_loadu_ps(this->val + i);
+            __m256 valueVec = _mm256_set1_ps(static_cast<float>(value));
+            vec = _mm256_add_ps(vec, valueVec);
+            _mm256_storeu_ps(this->val + i, vec);
+        }
+    } else if constexpr (std::is_same_v<DATA, double>) {
+        for(int i=0; i<Size; i+=4) {
+            __m256d vec = _mm256_loadu_pd(this->val + i);
+            __m256d valueVec = _mm256_set1_pd(value);
+            vec = _mm256_add_pd(vec, valueVec);
+            _mm256_storeu_pd(this->val + i, vec);
+        }
+    } else {
+        for(int i=0; i<Size; ++i) {
+            *(this->val + i) += value;
+        }
     }
+    #else
+    for(int i=0; i<Size; ++i) {
+        *(this->val + i) += value;
+    }
+    #endif
+
     return *this;
 }
 
@@ -2301,15 +2339,42 @@ matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
    m += m2;
    return m;
 }
+
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
     int Size = m1.rows() * m1.cols();
     matrix<DATA> resMat = m1;
-    for(int i=0; i<Size; ++i) {
-        DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
-        temp += value;
-        resMat(i/resMat.cols(), i%resMat.cols()) = temp;
+
+    #ifdef __AVX__
+    if constexpr (std::is_same_v<DATA, float>) {
+        for(int i=0; i<Size; i+=8) {
+            __m256 vec = _mm256_loadu_ps(&resMat(i/resMat.cols(), i%resMat.cols()));
+            __m256 valueVec = _mm256_set1_ps(static_cast<float>(value));
+            vec = _mm256_add_ps(vec, valueVec);
+            _mm256_storeu_ps(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
+        }
+    } else if constexpr (std::is_same_v<DATA, double>) {
+       for(int i=0; i<Size; i+=4) {
+            __m256d vec = _mm256_loadu_pd(&resMat(i/resMat.cols(), i%resMat.cols()));
+            __m256d valueVec = _mm256_set1_pd(value);
+            vec = _mm256_add_pd(vec, valueVec);
+            _mm256_storeu_pd(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
+       }
+    } else {
+        #pragma omp parallel for 
+        for(int i=0; i<Size; ++i) {
+            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+            temp += value;
+            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
+        }
     }
+    #else //if intrinsics not present
+        for(int i=0; i<Size; ++i) {
+            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+            temp += value;
+            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
+        }
+    #endif
     return resMat;
 }
 template<typename DATA>
@@ -2328,11 +2393,39 @@ matrix<DATA> operator-(const matrix<DATA>& m1, const matrix<DATA>& m2){
 }
 template<typename DATA>
 matrix<DATA> operator-(const matrix<DATA>& m1, const double value) {
-    matrix<DATA> res = m1;
-    int Size = res.rows() * res.cols();
-     for(int i=0; i<Size; ++i)
-        res(i/res.cols(), i%res.cols()) -= value;
-    return res;
+    int Size = m1.rows() * m1.cols();
+    matrix<DATA> resMat = m1;
+
+    #ifdef __AVX__
+    if constexpr (std::is_same_v<DATA, float>) {
+        for(int i=0; i<Size; i+=8) {
+            __m256 vec = _mm256_loadu_ps(&resMat(i/resMat.cols(), i%resMat.cols()));
+            __m256 valueVec = _mm256_set1_ps(static_cast<float>(value));
+            vec = _mm256_sub_ps(vec, valueVec);
+            _mm256_storeu_ps(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
+        }
+    } else if constexpr (std::is_same_v<DATA, double>) {
+        for(int i=0; i<Size; i+=4) {
+            __m256d vec = _mm256_loadu_pd(&resMat(i/resMat.cols(), i%resMat.cols()));
+            __m256d valueVec = _mm256_set1_pd(value);
+            vec = _mm256_sub_pd(vec, valueVec);
+            _mm256_storeu_pd(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
+        }
+    } else {
+        for(int i=0; i<Size; ++i) {
+            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+            temp -= value;
+            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
+        }
+    }
+    #else //if intrinsics not present
+        for(int i=0; i<Size; ++i) {
+            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+            temp -= value;
+            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
+        }
+    #endif
+    return resMat;
 }
 template<typename DATA>
 matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
@@ -2341,50 +2434,27 @@ matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
 
 /// MATRIX MULTIPLICATION
 template<typename DATA>
-matrix<DATA> operator&(const matrix<DATA> &m1,const matrix<DATA> &m2) {
+matrix<DATA> normmatmul(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     if(m1.cols() != m2.rows()) {
         throw std::invalid_argument("linear::matmul - Internal dimensions do not match.");   
     }
-    
-    int i, j, k;
-    matrix<DATA> m(m1.rows(), m2.cols(), (DATA)0);
-    if (m1.rows() >= 100 || m1.cols() >= 100 || m2.cols() >= 100) {
-        #ifdef _OPENACC
-        //std::cout<<"Using OpenACC for parallelization\n";
-        #pragma acc parallel loop gang private(i, j, k) present(m1, m2, m)
-        #else
-        //std::cout<<"Using OpenMP for parallelization\n";
-        #pragma omp parallel for  collapse(2) private(i,j,k) shared(m1, m2, m)
-        #endif
-        for(i=0; i<m1.rows(); ++i) {
-            for(k=0; k<m2.rows(); ++k) {
-                #ifdef _OPENACC
-                #pragma acc loop vector
-                #else
-                #pragma omp simd
-                #endif
-                for(j=0; j<m2.cols(); ++j)
-                    m(i,j) += m1(i,k) * m2(k,j);
-            }
-        } //i-loop
-        return std::move(m);
-    }
-    else {
-        for(i=0; i<m1.rows(); ++i)
-            for(k=0; k<m2.rows(); ++k)
-                for(j=0; j<m2.cols(); ++j)
-                    m(i,j) += m1(i,k) * m2(k,j);
-        
-        return std::move(m);
-    }
+    matrix<DATA> m(m1.rows(), m2.cols(), DATA(0.));
+
+    for(int i=0; i<m1.rows(); ++i) {
+        for(int k=0; k<m2.rows(); ++k) {
+            for(int j=0; j<m2.cols(); ++j)
+                    m(i,j) += m1(i,k) * m2(k,j);  
+        } // k-loop
+    } //i-loop
+    return m;
 } 
 template<typename DATA>
 matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    return std::move(m1&m2);
+    return m1&m2;
 }
 
 template<typename DATA>
-matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=128) {
+matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=32) {
     if (m1.cols() != m2.rows()) {
         throw std::invalid_argument("linear::matmul_block - Internal dimensions do not match.");
     }
@@ -2394,11 +2464,10 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
     const int p = m2.cols();
 
     matrix<DATA> result(m, p, (DATA)0);
-    int i,j,k;
-    #pragma omp parallel for collapse(2) private(i,j,k) shared(m1, m2, result)
-    for ( i = 0; i < m; i += block_size) {
-        for ( k = 0; k < p; k += block_size) {
-            for ( j = 0; j < n; j += block_size) {
+    #pragma omp parallel for collapse(2) shared(m1, m2, result)
+    for (int i = 0; i < m; i += block_size) {
+        for (int k = 0; k < p; k += block_size) {
+            for (int j = 0; j < n; j += block_size) {
                 // Compute block multiplication
                 for (int ii = i; ii < std::min(i + block_size, m); ++ii) {
                     for (int kk = k; kk < std::min(k + block_size, p); ++kk) {
@@ -2414,13 +2483,13 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
         }
     }
 
-    return std::move(result);
+    return result;
 }
 
 template<typename DATA>
 matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
     if(A.cols() != B.rows())
-        throw std::invalid_argument(";inear::matmul_blas - Internal dimensions do not match.");
+        throw std::invalid_argument("linear::matmul_blas - Internal dimensions do not match.");
     
     int m = A.rows();
     int n = B.cols();
@@ -2431,7 +2500,7 @@ matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
     // Call BLAS function for matrix-matrix multiplication
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, A.begin(), k, B.begin(), n, 0.0, C.begin(), n);
 
-    return std::move(C);
+    return C;
 }
 
 matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
@@ -2441,34 +2510,38 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
         in matrix multiplication operator `&` or `matmul` are much
         faster than any implementation so far.
     */
-    
-    #ifdef __AVX__
+    #if __AVX__
         if (A.cols() != B.rows()) {
             throw std::invalid_argument("linear::matmul_simd - Internal dimensions do not match.");
         }
         int rowsA = A.rows();
         int colsA = A.cols();
         int colsB = B.cols();
-        matrix<double> result(rowsA, colsB);
         
-        #pragma omp parallel for collapse(2)
+        matrix<double> result(rowsA, colsB);
+        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 64 || colsA >= 64 || colsB >= 64)
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
                 __m256d sum = _mm256_setzero_pd();  // Initialize sum vector with zeros
                 
-                for (int k = 0; k < colsA; ++k) {
+                for (int k = 0; k < colsA; k+=8) {
                     
-                    __m256d a = _mm256_loadu_pd(&A(i, k));
-                    __m256d b = _mm256_loadu_pd(&B(k, j));
+                    __m256d a1 = _mm256_set_pd(A(i, k + 3), A(i, k + 2), A(i, k + 1), A(i, k));
+                    __m256d b1 = _mm256_set_pd(B(k + 3, j), B(k + 2, j), B(k + 1, j), B(k, j));
+
+                    __m256d a2 = _mm256_set_pd(A(i, k + 3 + 4), A(i, k + 2 + 4), A(i, k + 1 + 4), A(i, k + 4));
+                    __m256d b2 = _mm256_set_pd(B(k + 3 + 4, j), B(k + 2 + 4, j), B(k + 1 + 4, j), B(k + 4, j));
 
                     // Perform SIMD multiplication and addition
-                    sum = _mm256_add_pd(sum, _mm256_mul_pd(a, b));
+                    sum = _mm256_add_pd(sum, _mm256_mul_pd(a1, b1));
+                    sum = _mm256_add_pd(sum, _mm256_mul_pd(a2, b2));
                 }
-                // Store the result in the matrix
-                 result(i, j) = _mm256_cvtsd_f64(sum);
+                alignas(32) double temp[4];
+                _mm256_store_pd(temp, sum);
+                result(i, j) = temp[0] + temp[1] + temp[2] + temp[3];
+                }
             }
-        }
-        return std::move(result);
+        return result;
     #else
         throw std::runtime_error("linear::matmul_simd - SIMD instructions never compiled. See if you used `-mavx` flag.");
     #endif
@@ -2531,7 +2604,7 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
     result.setSubMatrix(newSize, n, newSize, n, C22);
 
     // Return the final result
-    return std::move(result);
+    return result;
 }
 
 // Parallelized Strassen's algorithm for multiplying square matrices
@@ -2598,7 +2671,7 @@ matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int ba
     result.setSubMatrix(newSize, n, 0, newSize, C21);
     result.setSubMatrix(newSize, n, newSize, n, C22);
 
-    return std::move(result);
+    return result;
 }
 
 /// TRIANGULAR MATRIX GENERATORS ///
@@ -2649,8 +2722,6 @@ matrix<double> ltm(int size, double mean, double std) {
 matrix<double> tril(int size, double mean, double std) {
     return lower_triangle_matrix(size, mean, std);
 }
-/////////
-
 
 template<typename DATA>
 void init2dArray(DATA *array, int size_0, int size_1) {
@@ -2732,7 +2803,463 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
     }
 }
 
+/*  
+    GENERAL MATRIX MULTIPLY IMPLEMENTATION (GEMM) 
+    References provided at the end
+*/
+//-- malloc with alignment --------------------------------------------------------
+void *
+malloc_(std::size_t alignment, std::size_t size)
+{
+    alignment = std::max(alignment, alignof(void *));
+    size     += alignment;
+
+    void *ptr  = std::malloc(size);
+    void *ptr2 = (void *)(((uintptr_t)ptr + alignment) & ~(alignment-1));
+    void **vp  = (void**) ptr2 - 1;
+    *vp        = ptr;
+    return ptr2;
+}
+
+void
+free_(void *ptr)
+{
+    std::free(*((void**)ptr-1));
+}
+
+//-- Config --------------------------------------------------------------------
+
+// SIMD-Register width in bits
+// SSE:         128
+// AVX/FMA:     256
+// AVX-512:     512
+#ifndef SIMD_REGISTER_WIDTH
+#define SIMD_REGISTER_WIDTH 256
+#endif
+
+#ifdef HAVE_FMA
+
+#   ifndef BS_D_MR
+#   define BS_D_MR 4
+#   endif
+
+#   ifndef BS_D_NR
+#   define BS_D_NR 12
+#   endif
+
+#   ifndef BS_D_MC
+#   define BS_D_MC 256
+#   endif
+
+#   ifndef BS_D_KC
+#   define BS_D_KC 512
+#   endif
+
+#   ifndef BS_D_NC
+#   define BS_D_NC 4092
+#   endif
+
+#endif
+
+
+
+#ifndef BS_D_MR
+#define BS_D_MR 4
+#endif
+
+#ifndef BS_D_NR
+#define BS_D_NR 8
+#endif
+
+#ifndef BS_D_MC
+#define BS_D_MC 256
+#endif
+
+#ifndef BS_D_KC
+#define BS_D_KC 256
+#endif
+
+#ifndef BS_D_NC
+#define BS_D_NC 4096
+#endif
+
+template <typename T>
+struct BlockSize
+{
+    static constexpr int MC = 64;
+    static constexpr int KC = 64;
+    static constexpr int NC = 256;
+    static constexpr int MR = 8;
+    static constexpr int NR = 8;
+
+    static constexpr int rwidth = 0;
+    static constexpr int align  = alignof(T);
+    static constexpr int vlen   = 0;
+
+    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
+    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
+    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
+};
+
+
+template <>
+struct BlockSize<double>
+{
+    static constexpr int MC     = BS_D_MC;
+    static constexpr int KC     = BS_D_KC;
+    static constexpr int NC     = BS_D_NC;
+    static constexpr int MR     = BS_D_MR;
+    static constexpr int NR     = BS_D_NR;
+
+    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
+    static constexpr int align  = rwidth / 8;
+    static constexpr int vlen   = rwidth / (8*sizeof(double));
+
+    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
+    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
+    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
+    static_assert(rwidth % sizeof(double) == 0, "SIMD register width not sane.");
+};
+
+template <>
+struct BlockSize<int>
+{
+    static constexpr int MC     = BS_D_MC;
+    static constexpr int KC     = BS_D_KC;
+    static constexpr int NC     = BS_D_NC;
+    static constexpr int MR     = BS_D_MR;
+    static constexpr int NR     = BS_D_NR;
+
+    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
+    static constexpr int align  = rwidth / 8;
+    static constexpr int vlen   = rwidth / (8*sizeof(int));
+
+    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
+    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
+    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
+    static_assert(rwidth % sizeof(int) == 0, "SIMD register width not sane.");
+};
+
+template <>
+struct BlockSize<float>
+{
+    static constexpr int MC     = BS_D_MC;
+    static constexpr int KC     = BS_D_KC;
+    static constexpr int NC     = BS_D_NC;
+    static constexpr int MR     = BS_D_MR;
+    static constexpr int NR     = BS_D_NR;
+
+    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
+    static constexpr int align  = rwidth / 8;
+    static constexpr int vlen   = rwidth / (8*sizeof(float));
+
+    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
+    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
+    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
+    static_assert(rwidth % sizeof(float) == 0, "SIMD register width not sane.");
+};
+
+template <>
+struct BlockSize<long>
+{
+    static constexpr int MC     = BS_D_MC;
+    static constexpr int KC     = BS_D_KC;
+    static constexpr int NC     = BS_D_NC;
+    static constexpr int MR     = BS_D_MR;
+    static constexpr int NR     = BS_D_NR;
+
+    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
+    static constexpr int align  = rwidth / 8;
+    static constexpr int vlen   = rwidth / (8*sizeof(long));
+
+    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
+    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
+    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
+    static_assert(rwidth % sizeof(long) == 0, "SIMD register width not sane.");
+};
+
+//-- aux routines --------------------------------------------------------------
+template <typename Index, typename Alpha, typename TX, typename TY>
+void
+geaxpy(Index m, Index n,
+       const Alpha &alpha,
+       const TX *X, Index incRowX, Index incColX,
+       TY       *Y, Index incRowY, Index incColY)
+{
+    for (Index j=0; j<n; ++j) {
+        for (Index i=0; i<m; ++i) {
+            Y[i*incRowY+j*incColY] += alpha*X[i*incRowX+j*incColX];
+        }
+    }
+}
+
+template <typename Index, typename Alpha, typename TX>
+void
+gescal(Index m, Index n,
+       const Alpha &alpha,
+       TX *X, Index incRowX, Index incColX)
+{
+    if (alpha!=Alpha(0)) {
+        for (Index j=0; j<n; ++j) {
+            for (Index i=0; i<m; ++i) {
+                X[i*incRowX+j*incColX] *= alpha;
+            }
+        }
+    } else {
+        for (Index j=0; j<n; ++j) {
+            for (Index i=0; i<m; ++i) {
+                X[i*incRowX+j*incColX] = Alpha(0);
+            }
+        }
+    }
+}
+
+//-- Micro Kernel --------------------------------------------------------------
+template <typename Index, typename T>
+typename std::enable_if<BlockSize<T>::vlen != 0,
+         void>::type
+ugemm(Index kc, T alpha, const T *A, const T *B, T beta,
+      T *C, Index incRowC, Index incColC)
+{
+    typedef T vx __attribute__((vector_size (BlockSize<T>::rwidth/8)));
+
+    static constexpr Index vlen = BlockSize<T>::vlen;
+    static constexpr Index MR   = BlockSize<T>::MR;
+    static constexpr Index NR   = BlockSize<T>::NR/vlen;
+
+    A = (const T*) __builtin_assume_aligned (A, BlockSize<T>::align);
+    B = (const T*) __builtin_assume_aligned (B, BlockSize<T>::align);
+
+    vx P[MR*NR] = {};
+
+    for (Index l=0; l<kc; ++l) {
+        const vx *b = (const vx *)B;
+        for (Index i=0; i<MR; ++i) {
+            for (Index j=0; j<NR; ++j) {
+                P[i*NR+j] += A[i]*b[j];
+            }
+        }
+        A += MR;
+        B += vlen*NR;
+    }
+
+    if (alpha!=T(1)) {
+        for (Index i=0; i<MR; ++i) {
+            for (Index j=0; j<NR; ++j) {
+                P[i*NR+j] *= alpha;
+            }
+        }
+    }
+
+    if (beta!=T(0)) {
+        for (Index i=0; i<MR; ++i) {
+            for (Index j=0; j<NR; ++j) {
+                const T *p = (const T *) &P[i*NR+j];
+                for (Index j1=0; j1<vlen; ++j1) {
+                    C[i*incRowC+(j*vlen+j1)*incColC] *= beta;
+                    C[i*incRowC+(j*vlen+j1)*incColC] += p[j1];
+                }
+            }
+        }
+    } else {
+        for (Index i=0; i<MR; ++i) {
+            for (Index j=0; j<NR; ++j) {
+                const T *p = (const T *) &P[i*NR+j];
+                for (Index j1=0; j1<vlen; ++j1) {
+                    C[i*incRowC+(j*vlen+j1)*incColC] = p[j1];
+                }
+            }
+        }
+    }
+}
+
+//-- Macro Kernel --------------------------------------------------------------
+template <typename Index, typename T, typename Beta, typename TC>
+void
+mgemm(Index mc, Index nc, Index kc,
+      T alpha,
+      const T *A, const T *B,
+      Beta beta,
+      TC *C, Index incRowC, Index incColC)
+{
+    const Index MR = BlockSize<T>::MR;
+    const Index NR = BlockSize<T>::NR;
+    const Index mp  = (mc+MR-1) / MR;
+    const Index np  = (nc+NR-1) / NR;
+    const Index mr_ = mc % MR;
+    const Index nr_ = nc % NR;
+
+    T C_[MR*NR];
+
+    #pragma omp parallel for
+    for (Index j=0; j<np; ++j) {
+        const Index nr = (j!=np-1 || nr_==0) ? NR : nr_;
+
+        for (Index i=0; i<mp; ++i) {
+            const Index mr = (i!=mp-1 || mr_==0) ? MR : mr_;
+
+            if (mr==MR && nr==NR) {
+                ugemm(kc, alpha,
+                      &A[i*kc*MR], &B[j*kc*NR],
+                      beta,
+                      &C[i*MR*incRowC+j*NR*incColC],
+                      incRowC, incColC);
+            } else {
+                ugemm(kc, alpha,
+                      &A[i*kc*MR], &B[j*kc*NR],
+                      T(0),
+                      C_, Index(1), MR);
+                gescal(mr, nr, beta,
+                       &C[i*MR*incRowC+j*NR*incColC],
+                       incRowC, incColC);
+                geaxpy(mr, nr, T(1), C_, Index(1), MR,
+                       &C[i*MR*incRowC+j*NR*incColC],
+                       incRowC, incColC);
+            }
+        }
+    }
+}
+//-- Packing blocks ------------------------------------------------------------
+template <typename Index, typename TA, typename T>
+void
+pack_A(Index mc, Index kc,
+       const TA *A, Index incRowA, Index incColA,
+       T *p)
+{
+    Index MR = BlockSize<T>::MR;
+    Index mp = (mc+MR-1) / MR;
+
+    for (Index j=0; j<kc; ++j) {
+        for (Index l=0; l<mp; ++l) {
+            for (Index i0=0; i0<MR; ++i0) {
+                Index i  = l*MR + i0;
+                Index nu = l*MR*kc + j*MR + i0;
+                p[nu]   = (i<mc) ? A[i*incRowA+j*incColA]
+                                 : T(0);
+            }
+        }
+    }
+}
+
+template <typename Index, typename TB, typename T>
+void
+pack_B(Index kc, Index nc,
+       const TB *B, Index incRowB, Index incColB,
+       T *p)
+{
+    Index NR = BlockSize<T>::NR;
+    Index np = (nc+NR-1) / NR;
+
+    for (Index l=0; l<np; ++l) {
+        for (Index j0=0; j0<NR; ++j0) {
+            for (Index i=0; i<kc; ++i) {
+                Index j  = l*NR+j0;
+                Index nu = l*NR*kc + i*NR + j0;
+                p[nu]   = (j<nc) ? B[i*incRowB+j*incColB]
+                                 : T(0);
+            }
+        }
+    }
+}
+//-- Frame routine -------------------------------------------------------------
+template <typename Index, typename Alpha,
+         typename TA, typename TB,
+         typename Beta,
+         typename TC>
+void
+gemm(Index m, Index n, Index k,
+     Alpha alpha,
+     const TA *A, Index incRowA, Index incColA,
+     const TB *B, Index incRowB, Index incColB,
+     Beta beta,
+     TC *C, Index incRowC, Index incColC)
+{
+    typedef typename std::common_type<Alpha, TA, TB>::type  T;
+
+    const Index MC = BlockSize<T>::MC;
+    const Index NC = BlockSize<T>::NC;
+    const Index MR = BlockSize<T>::MR;
+    const Index NR = BlockSize<T>::NR;
+
+    const Index KC = BlockSize<T>::KC;
+    const Index mb = (m+MC-1) / MC;
+    const Index nb = (n+NC-1) / NC;
+    const Index kb = (k+KC-1) / KC;
+    const Index mc_ = m % MC;
+    const Index nc_ = n % NC;
+    const Index kc_ = k % KC;
+
+    T *A_ = (T*) malloc_(BlockSize<T>::align, sizeof(T)*(MC*KC+MR));
+    T *B_ = (T*) malloc_(BlockSize<T>::align, sizeof(T)*(KC*NC+NR));
+
+    if (alpha==Alpha(0) || k==0) {
+        gescal(m, n, beta, C, incRowC, incColC);
+        return;
+    }
+
+    for (Index j=0; j<nb; ++j) {
+        Index nc = (j!=nb-1 || nc_==0) ? NC : nc_;
+
+        for (Index l=0; l<kb; ++l) {
+            Index   kc  = (l!=kb-1 || kc_==0) ? KC : kc_;
+            Beta beta_  = (l==0) ? beta : Beta(1);
+
+            pack_B(kc, nc,
+                   &B[l*KC*incRowB+j*NC*incColB],
+                   incRowB, incColB,
+                   B_);
+
+            for (Index i=0; i<mb; ++i) {
+                Index mc = (i!=mb-1 || mc_==0) ? MC : mc_;
+
+                pack_A(mc, kc,
+                       &A[i*MC*incRowA+l*KC*incColA],
+                       incRowA, incColA,
+                       A_);
+
+                mgemm(mc, nc, kc,
+                      T(alpha), A_, B_, beta_,
+                      &C[i*MC*incRowC+j*NC*incColC],
+                      incRowC, incColC);
+            }
+        }
+    }
+    free_(A_);
+    free_(B_);
+}
+
+//------------------------------------------------------------------------------
+// works on the internal pointer
+void matrixproduct(double *c, const double* a, const double* b, int N) {
+    gemm(N, N, N, 1.0, a, N, 1, b, N, 1, 0.0, c, N, 1);
+}
+
+// GEMM implemented within linear::operator&
+template<typename DATA>
+matrix<DATA> operator&(const matrix<DATA>& A, const matrix<DATA>& B) {
+    const int M = A.rows();
+    const int K = A.cols();
+    const int N = B.cols();
+
+
+    if(A.cols() != B.rows())
+        throw std::domain_error("linear::operator& - Internal dimensions do not match.");
+
+    matrix<DATA> C(M,N);
+
+    if(M <= 128 || N <= 128 || K <= 128)
+        return normmatmul(A,B);
+
+    gemm(M,N,K, (DATA)1.0, A.begin(), M, 1, B.begin(), K, 1, (DATA)0.0, C.begin(), M, 1);
+    return C;
+}
+/* Reference for GEMM code above
+Code sourced from and modified:-
+https://stackoverflow.com/a/35637007
+
+Inspired by the BLIS framework:-
+https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf
+*/
 
 }//linear namespace ends
-
 #endif // MATRIX_H

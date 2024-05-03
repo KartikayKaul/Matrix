@@ -1,12 +1,41 @@
 #include<iostream>
 
-#include "matrix.h"
-#include "matview.h"
+#include "../matrix.h"
+#include "../matview.h"
 
 using namespace std;
 using namespace linear;
 
 int main() {
+
+    /* Initializing matrices
+        There are several ways to initialize a linear::matrix.
+        Below lines of code will demonstrate it.
+    */
+
+    // initialize an empty matrix of double
+    matrix empty_matrix;
+    empty_matrix.display("empty_matrix:-");
+    empty_matrix.getDims().display("empty_matrix dims:-");
+
+
+    // initialize a 3x3 integer matrix of zeros
+    matrix<int> zeros_3x3(3,3,0);
+    zeros_3x3.display("zeros_3x3:-");
+
+    // chained initialization using << operator
+    matrix<int>  someMatrix(3,4);
+    someMatrix << 1 << 0 << 0 << 0
+               << 0 << 1 << 0 << 0
+               << 0 << 0 << 1 << 0;
+    someMatrix.display("someMatrix:-");
+
+    // initialize using initializer list
+    matrix c1 = {{1.f, -2.f, 1.5f}}; //notice the type of matrix will be determined based on the float values in the init list
+    c1.display("c1:-");
+    cout<<"\nc1 type:- "<<c1.type_s()<<endl;
+
+
     /*
     Matrix Addition
         for addition between two matrices the
@@ -95,28 +124,17 @@ int main() {
 
 
     // You can try to use boolean operations
-    matrix<double> someData = randomUniformInt(10, 10, -10,10);
+    matrix<double> someData = randomUniformInt(5, 5, -10,10);
     someData.display("someData:-");
     matrix<bool> moreThan2 = 2<someData;
-    moreThan2.display("lessThan2:-");
+    moreThan2.display("moreThan2:-");
     matrix<double> moreThan2Data = someData(moreThan2);
-    matrix<double> lessThan2Data = someData(someData<=2);
+    matrix<double> lessThanEqual2Data = someData(someData<=2);
     moreThan2Data.display("moreThan2Data:-");
-    lessThan2Data.display("lessThan2Data:-");
+    lessThanEqual2Data.display("lessThanEqual2Data:-");
     moreThan2Data.getDims().display();
     //In case of trying to attempt != you can simply do !(A==B)
 
 
-    vector<vector<double>> vecData = someData.toVector();
-    
-    int n=2;
-    std::complex<double> *array = new std::complex<double>[n*n];
-    init2dArray<double>(array, n, n);
-    matrix<std::complex<double>> complexMatrix(array, n, n);
-    complexMatrix.display("complex matrix:-");
-    deAlloc(array);
-
-    cout<<"\nMemory consumed by complex matrix = "<<complexMatrix.getTotalMemory()<<endl;
-    
     return 0;
 }

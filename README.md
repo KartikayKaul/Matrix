@@ -76,8 +76,8 @@ The benchmarked times are averaged over 1000 iterations for double matrices of s
 |   256   |     0.2 ms  |    0.298 ms   |    5.146 ms     |   0.292 ms    |  2.707 ms  
 |512     |  3.835 ms    |  13.201 ms |  30.334 ms    | 2.854 ms | 24.004 ms
 |1024    |  25.96 ms  |  - |  173.64 ms   | 27.68 ms | 192.1 ms
-| 2048    |  961 ms  |  - | 1209 ms | 155.78 ms | 1674 ms
-|  4096    | 132221 ms |  - |  8155 ms | 855.22 ms | 13633 ms
+| 2048    |  184.98 ms  |  - | 1209 ms | 155.78 ms | 1675 ms
+|  4096    | 961 ms |  - |  8155 ms | 855.22 ms | 13633 ms
 | 8192 |  7025 ms |  - | - | 6833 ms | -
 
 

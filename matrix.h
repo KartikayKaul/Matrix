@@ -323,7 +323,7 @@ class matrix {
         matrix(const matrix<ATAD>& m) {
             this->getMemoryforVal(m.rows(), m.cols());
 
-            #pragma omp parallel for if(m.rows() >= 64 || m.cols() >= 64)
+            #pragma omp parallel for collapse(2) if(m.rows() >= 64 || m.cols() >= 64)
             for (int i = 0; i < this->row; ++i) {
                 for (int j = 0; j < this->col; ++j) {
                     if constexpr(std::is_class_v<ATAD>) {
@@ -358,7 +358,7 @@ class matrix {
         matrix(matrix<ATAD>&& other) noexcept {
             this->getMemoryforVal(other.rows(), other.cols());
 
-            #pragma omp parallel for if(other.rows() >= 100 || other.cols() >= 100)
+            #pragma omp parallel for collapse(2) if(other.rows() >= 100 || other.cols() >= 100)
             for (int i = 0; i < this->row; ++i) {
                 for (int j = 0; j < this->col; ++j) {
                     if constexpr(std::is_class_v<ATAD>) {
@@ -447,12 +447,12 @@ class matrix {
         matrix<DATA> &operator=(const matrix<ATAD>& m1) {
             this->changeDims(m1.rows(), m1.cols());
              if constexpr ( std::is_same_v<ATAD,std::complex<DATA>>) {
-                #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+                #pragma omp parallel for collapse(2) if(m1.rows() >= 100 || m1.cols() >= 100)
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = std::real(m1(i,j));
             } else if constexpr(!std::is_same_v<DATA, ATAD>) {
-                #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+                #pragma omp parallel for collapse(2) if(m1.rows() >= 100 || m1.cols() >= 100)
                 for(int i=0; i<m1.rows(); ++i)
                     for(int j=0; j<m1.cols(); ++j) 
                         *(val + i*(this->cols()) + j) = static_cast<DATA>(m1(i,j));
@@ -2047,7 +2047,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols(), true);
 
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for collapse(2) if(m1.rows() >= 100 || m1.cols() >= 100)
     for(int i=0; i<m1.rows(); ++i)
         for(int j=0; j<m1.cols(); ++j)
                 if(std::abs(m1(i,j) - m2(i,j)) > PRECISION_TOL(DATA) )

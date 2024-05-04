@@ -36,14 +36,14 @@ int main(int arg, char *argv[]) {
     //benchmarking matrix mul SIMD
     cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
     auto start1 = high_resolution_clock::now();
-    D = matmul_simd(A,B);
+    //D = matmul_simd(A,B);
     auto end1 = high_resolution_clock::now();
     auto duration1 = duration_cast<milliseconds>(end1-start1);
 
     //benchmarking matrix mul SIMD
     cout<<"\n\n STRASSEN'S MATRIX MUL BENCHMARKING";
     auto start2 = high_resolution_clock::now();
-    E = strassen_multiply(A,B,128);
+    //E = strassen_multiply(A,B,128);
     auto end2 = high_resolution_clock::now();
     auto duration2 = duration_cast<milliseconds>(end2-start2);
 
@@ -86,14 +86,14 @@ int main(int arg, char *argv[]) {
 
     
     
-    cout<<"matmul result == simd result? ";
-    (C==D).all(true)? cout<<"true\n":cout<<"false\n";
+    // cout<<"matmul result == simd result? ";
+    // (C==D).all(true)? cout<<"true\n":cout<<"false\n";
 
-    cout<<"matmul result == strassen result? ";
-    (C==E).all(true) ? cout<<"true\n":cout<<"false\n";
+    // cout<<"matmul result == strassen result? ";
+    // (C==E).all(true) ? cout<<"true\n":cout<<"false\n";
     
-    cout<<"simd result == strassen result? ";
-    (D==E).all(true) ? cout<<"true\n":cout<<"false\n";
+    // cout<<"simd result == strassen result? ";
+    // (D==E).all(true) ? cout<<"true\n":cout<<"false\n";
 
     cout<<"GEMM == normal matmul result? ";
     (J==C).all(true) ? cout<<"true\n":cout<<"false\n";

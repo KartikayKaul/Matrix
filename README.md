@@ -1,69 +1,86 @@
 # Matrix
- Linear Algebra library in C++
+A Linear Algebra library in C++. Matrix is a class template library written for fast linear algebra operations. 
+
 
 The matrix code as of now is just a copy of the matrix data structure I made in [AbstractDS repo](https://github.com/DrakenWan/Abstract-Data-Structures). I am going to now create a standalone linear algebra library in c++. This is just me experimenting for my [scientific computing](https://www.cs.ucr.edu/~craigs/courses/2023-fall-cs-210/index.html) course. After sufficient operations and functions are added to the library, I will start adding documentation for every operation. You can check the [Updates](#Updates) section to see what changes I've made so far. Some of the earliest changes that are not documented here can be referenced in the commits made to [misc::matrix folder](https://github.com/DrakenWan/Abstract-Data-Structures/tree/master/ADT/miscellaneous/matrix) in AbstractDS repository. For now you can look at  below sections that explain some of the operations briefly and also take a look at [main.cpp](./main.cpp) file which has some experimentation with different operations and also helps show how to work with matrix class in a c++ program.
 
+Matrix library makes use of matrix class template so we can have matrix elements of different types. However, it is imperative that the types be numerical types. Preferred numerical type is `double` precision floats. Checking the type of the type parameter is done at compile time using `linear::is_numeric_v` type trait. It includes all possible numerical types including `std::complex`.
 
-Matrix library is makes use of matrix class template so we can have matrix elements of different types. However, it is imperative that the types be numerical types. Preferred numerical type is `double` precision floats. Many of the implemented non-member operations also operate solely on `double` precision floats such as `random`, `zeros`, etc.
-
-Be careful when dealing with `std::complex` matrices. Although I have tested the library with complex matrices and it works fine in many cases but when it comes to performing operations where type conversion might occur, due to there being explicit conversion or implicit, some errors may arise. Moreover, I am actively taking into consideration adding safety measures to handle such cases and accomodate operations for complex numerical operations with the matrices.
+Be careful when dealing with `std::complex` matrices. Although I have tested the library with complex matrices and it works fine in many operations but in some operations there may arise some issues. You can report them in [issues section](https://github.com/DrakenWan/Matrix/issues). Moreover, I am actively taking into consideration adding safety measures to handle such cases and accomodate operations for complex numerical operations with the matrices.
 
 
 ## Parallelization and Optimization
 
-Memory alignment has been performed during memory allocation by aligning it based on the `DATA` parameter value of the matrix class template. This significantly helps improve certain algorithms/operations, especially the ones that are cache-friendly, such as `linear::matmul_block` (blocked matrix multiplication). Further enabling `-O3` optimization significantly speeds up operations.
+I have haphazardly added code for `GEMM` inspired by [`BLIS`](https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf) framework and code is sourced from [here](https://stackoverflow.com/a/35637007). I want to add more Blocksize specializations for different types my `matrix` class supports and possibly put the whole GEMM kernel in entirely different header file and then combine both of them in a singular header file. I will probably do that. Anyway...
 
-Matrix multiplication operation using OpenACC or OpenMP parallelization based on appropriate compiler flag used. If you do not use the flag, the compiler will by default ignore the parallelization directives added in the code and run sequentially.
+Matrix multiplication operation `linear::matmul` (or `operator&`) makes use of the gemm implementation along with OpenMP parallelization based on appropriate compiler flag used. If you do not use the flag, the compiler will by default ignore the parallelization directives added in the code and run sequentially.
 
-In case of `matmul_simd` function, for it to work you have to add in the extra `-mavx`/`-mavx2` flag alongwith `-fopenmp`(optional but will reduce speed) flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
-On side note, `matmul_simd` performs worse than exclusive OpenMP parallelisation used in `&` and `matmul` operations but does job comparable to OpenMP when compared with the OpenACC parallelization.
+In case of `linear::matmul_simd` function, for it to work you have to add in the extra `-mavx`/`-mavx2` flag alongwith `-fopenmp`(optional but will reduce speed) flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler.
+On side note, `linear::matmul_simd` performs worse than `linear::matmul` and it can be fast for matrices of sizes around 128 and 512 but beyond and below it performs badly.
 
-One more way to speed up operations is to use `-O3` optimization flag but I have not tested the value of the results on large matrices' operations. `matmul_simd` operation does not have much speedup through `O3` optimization so it has not been benchmarked with it.
+There is also a standalone GEMM function `linear::matrixproduct` that actually performs faster than `linear::matmul`. However, there are some limitations. It works only on square matrices of type `double`. It is demonstrated below:-
+```cpp
+const int N = 512;
+linear::matrix<double> A(N,N);
+linear::matrix<double> B(N,N);
+linear::matrix<double> C(N,N);
+
+// use .begin() method to return DATA* pointers to the data of matrix.
+linear::matrixproduct(C.begin(), A.begin(), B.begin(), N);
+```
+This usually produces matrix much faster than `linear::matmul` as will be shown in the [Benchmark](#benchmarked-results) section below.
 
 Point to note is that I have tested it only on gcc compiler. Optimizations on other compilers such as icx have not been tested. In near future, I will also test this on MSVC and ICC as well. Currently plan is to make the code as portable as possible and make use of `std` functions to achieve so if possible.
+
 ### Commands
 Compiling using OpenMP:-
 ```bash
-g++ main.cpp -o main -fopenmp
+g++ main.cpp -o main -fopenmp -O3 
 ```
 
-Compiling using OpenACC:-
+Add `-fma` or `-mavx` flags for simd intrinsics based on the internal vector architecture you have.
 ```bash
-g++ main.cpp -o main -fopenacc
+g++ main.cpp -o main -fopenmp -O3 -mavx -mfma
 ```
-
-Compiling using `-O3` flag:-
-```bash
-g++ -O3 main.cpp -o main -fopenmp
-```
-
-It is recommended that you apply the -fopenmp flag by default. However, even if you do not add the flag the code will execute without errors but there will be no speedup.
-
-For sizes less than 100, parallization is disabled. This value is hard-coded as of now and cannot be changed by an environment variable or input to the `main` function or using a macros.
-
-I have benchmarked the matrix multiplication on matrix size of 1000x1000 for both OpenACC and OpenMP and OpenMP performs much better. I recommend using the `-fopenmp` flag to make use of parallelization but maybe this varies based on the system. So you can try benchmarking by running the [main.cpp](./main.cpp) file in your system.
-In my case, OpenMP produces result in ~1000 ms and OpenACC produces same result in ~8500 ms. Without parallelization it takes ~9000 ms. 
 
 ### Strassen's algorithm
 
-`strassen_multiply` has been implemented for square matrices whose order is 2^n. The algorithm was sped-up by setting the `base_case_cutoff` parameter to 512 by default. This can be adjusted. It is imperative that the dimensions are in powers of 2 for Strassen algorithm. The algorithms were benchmarked on different matrix sizes of order (2^n). Results are provided below that compare the results of algorithm to matrix sizes.
+`linear::strassen_multiply` has been implemented for square matrices whose order is 2^n. The algorithm was sped-up by setting the `base_case_cutoff` parameter to 512 by default. This can be adjusted. It is imperative that the dimensions are in powers of 2 for Strassen algorithm. The algorithms were benchmarked on different matrix sizes of order (2^n). Results are provided below that compare the results of algorithm to matrix sizes.
 I am thinking of adding [winograd optimization](https://en.wikipedia.org/wiki/Matrix_multiplication_algorithm#sub-cubic-algorithms) within Strassen algorithm to test it against with or without this optimization as well as compare with other algorithms.
 
 
 ### Benchmarked results 
-Note that the standard `Matrix Multiplication` implementation invokes OpenMP parallelization for matrices of sizes larger than 100. These values are not averaged.
+Note that the standard `Matrix Multiplication` implementation invokes OpenMP parallelization for matrices of sizes larger than 100. These time values are averaged over 1000 iterations and are run with `-O3` level optimization in with gcc compiler. The standard followed is from C++17. For `Fastor::matmul` the Tensors could only be defined upto 512. All the matrices are of dimensions in power of 2.
 
-| Matrix Size (n) | Matrix Multiplication | SIMD Matrix Mul | Strassen Matrix Mul | Matrix Mul (-O3) | Strassen (-O3) |
+Different `matmul` implementations in the columns of the benchmark table are described in the following list:-
+* `linear::matmul` is the default matrix multiplication in my library which uses [`BLIS`]((https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf)) inspired GEMM.
+* `Fastor::matmul` is the matrix multiplication implementation from [Fastor](https://github.com/romeric/Fastor) - a fast tensor algenra library
+* `linear::para_strassen_multiply` is the parallelized version of strassen algorithm implementation which works very fast.
+* `linear::matrixproduct` is the GEMM implementation that can be called directly on the data pointers of `linear::matrix` instances which can be accessed using `begin()` method.
+* `linear::matmul_block` is blocked matrix multiplication. This performs better for some medium sized (64-256) matrices. Sometimes even better than `linear::matmul`.
+
+Commands run in the cmd were:-
+```bash
+g++ main.cpp -o main -fopenmp -lblas -O3 -I./ -mfma -mavx
+```
+note: Fastor library was put in the same directory as the source file `main.cpp`, hence the `-I./` include flag.
+
+The benchmarked times are averaged over 1000 iterations for double matrices of sizes 16-512. After that, the iterations are reduced to 50 and `linear::para_strassen_multiply` and `linear::matmul_block` are not averaged after 2048.
+
+| Matrix Size (n) | linear::matmul | Fastor::matmul | linear::para_strassen_multiply | matrixproduct(GEMM) | linear::matmul_block |
 |-------------|-----------------------|-----------------|----------------------| ------------------|------------|
-|512     | 250 ms    |  255 ms |  256 ms    | 18 ms | 18 ms
-|1024    |  1950 ms   |  2114 ms |  1849 ms   | 123 ms | 137 ms
-| 2048    |  15768 ms  |  48661 ms |  13489 ms  | 983 ms | 1044 ms
-|  4096    | 132221 ms |  555819 ms |  99023 ms | 10798 ms | 7952 ms
-| 8192 |  18.9 min |  81.07 min | 12.26 min | 110.7 s | 64.3 s
+|   16    |    0 ms   |   0 ms  |  0 ms   |   0.054 ms      |  0.074 ms
+|  32    |    0 ms    |   0 ms    |    0.116 ms     |    0.025 ms     |  0.015 ms    
+|  64    |    0.002 ms  |   0 ms    |    0.272 ms     |    0.053 ms     |  0.045 ms   
+|  128    |    1.018 ms   |   0 ms     |   0.508 ms     |   0.099 ms    |  0.1 ms    
+|   256   |     0.2 ms  |    0.298 ms   |    5.146 ms     |   0.292 ms    |  2.707 ms  
+|512     |  3.835 ms    |  13.201 ms |  30.334 ms    | 2.854 ms | 24.004 ms
+|1024    |  25.96 ms  |  - |  173.64 ms   | 27.68 ms | 192.1 ms
+| 2048    |  961 ms  |  - | 1209 ms | 155.78 ms | 1674 ms
+|  4096    | 132221 ms |  - |  8155 ms | 855.22 ms | 13633 ms
+| 8192 |  7025 ms |  - | - | 6833 ms | -
 
-The efficiency of Strassen Matrix Multiplication here is high due to the fact we are testing this exclusively on matrices of sizes power of 2. Strassen only works with matrices whose dimensions are powers of 2. It can be made to work with square matrices not of power 2 by padding 0's to augment it's size to nearest power of 2. However, I have not implemented that into it.
 
-You can also tinker the `base_case_cutoff` parameter to test what works better for your input.
 
 ## Documentation
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.

@@ -15,19 +15,38 @@
 #include<complex>
 #include<type_traits>
 #include<x86intrin.h>
-#include<cblas.h>
+
+// Check if g++ or clang used except INTEL
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#define GCCAVAIL 1
+#else
+#define GCCAVAIL 0
+#endif
+
+// safeguard to check if cblas can be added
+#ifdef __cplusplus
+extern "C" {
+#endif
+#if GCCAVAIL
+#include <cblas.h>
+#endif
+#ifdef __cplusplus
+}
+#endif
+
 //testing
 #include<algorithm>
 
 namespace linear{
-// macros for deallocation
+// macro for deallocation
 #define deAlloc(x) delete[] x; x = NULL;
 
-#define MATRIX_PRECISION 4
-#define MATRIX_PRECISION_TOL 6
+// precision macros
+#define MATRIX_PRECISION 4 // precision of matrix values in console display
+#define MATRIX_PRECISION_TOL 6 
 #define PRECISION_TOL(type) std::numeric_limits<type>::epsilon() * std::pow(10, MATRIX_PRECISION_TOL)
 
-//path macros
+//path macros for IO
 #define SAVEPATH "saves" //default path
 #define F_EXT ".linmat" //default linear::matrix format
 
@@ -45,7 +64,7 @@ struct range {
   const int size() {return end - start;}
 };
 
-//Defining type trait to check if a type is complex //call as linear::is_complex<nametype>
+//Defining type trait to check if a type is std::complex
 template<typename DATA>
 struct is_complex : std::false_type {};
 template<typename DATA>
@@ -96,8 +115,8 @@ class matrix {
            - *first = points to the first location of the *val
            - *last = points to the last value in *val (*last <- *val + (row * col))
     */
-    static_assert(is_numeric_v<DATA>, "`matrix` class only supports numerical types.");
-    alignas(alignof(DATA)) DATA *val;
+    static_assert(is_numeric_v<DATA>, "`linear::matrix` class only supports numerical types.");
+    DATA *val;
     int row, col;
     DATA *first = NULL;
     DATA *last = NULL;
@@ -2486,6 +2505,7 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
     return result;
 }
 
+#if GCCAVAIL
 template<typename DATA>
 matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
     if(A.cols() != B.rows())
@@ -2502,6 +2522,7 @@ matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
 
     return C;
 }
+#endif
 
 matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
     /*

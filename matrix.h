@@ -2368,7 +2368,6 @@ matrix<DATA> normmatmul(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     }
     matrix<DATA> m(m1.rows(), m2.cols(), DATA(0.));
 
-    #pragma omp parallel for shared(m, m1, m2) if(m1.cols() > 32 || m1.rows() > 32 || m2.cols() > 32)
     for(int i=0; i<m1.rows(); ++i) {
         for(int k=0; k<m2.rows(); ++k) {
             for(int j=0; j<m2.cols(); ++j)
@@ -3165,7 +3164,7 @@ matrix<DATA> operator&(const matrix<DATA>& A, const matrix<DATA>& B) {
 
     matrix<DATA> C(M,N);
 
-    if(M <= 128 || N <= 128 || K <= 128)
+    if(M <= 256 && N <= 256 && K <= 256)
         return normmatmul(A,B);
 
     if constexpr(std::is_class_v<DATA>) {

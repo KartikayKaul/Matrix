@@ -10,7 +10,7 @@ using namespace std::chrono;
 int main(int arg, char *argv[]) {
     int N = std::atoi(argv[1]);
     
-    using TESTTYPE =  double;
+    using TESTTYPE =  int;
 
     cout<<"\nGenerating two "<<N<<'x'<<N<<" random matrices with TESTTYPE values... ";
     auto alloc_time_start = high_resolution_clock::now();
@@ -23,28 +23,28 @@ int main(int arg, char *argv[]) {
 
     cout<<"\n--:BENCHMARKING:--";
     //benchmarking matrix mul
-    cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING";
+    //cout<<"\n\n MATRIX MULTIPLICATION BENCHMARKING";
     auto start = high_resolution_clock::now();
     C = A&B;
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start);
 
     //benchmarking matrix mul SIMD
-    cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
+    //cout<<"\n\n SIMD MATRIX MUL BENCHMARKING";
     auto start1 = high_resolution_clock::now();
     D = matmul_simd(A,B);
     auto end1 = high_resolution_clock::now();
     auto duration1 = duration_cast<milliseconds>(end1-start1);
 
     //benchmarking GEMM
-    cout<<"\n\n GEMM  BENCHMARKING";
+    //cout<<"\n\n GEMM  BENCHMARKING";
     auto start7 = high_resolution_clock::now();
     matrixproduct(J.begin(), A.begin(), B.begin(), N);
     auto end7 = high_resolution_clock::now();
     auto duration7 = duration_cast<milliseconds>(end7-start7);
 
     //benchmarking linear::normmatmul
-    cout<<"\n\n normmatmul  BENCHMARKING";
+    //cout<<"\n\n normmatmul  BENCHMARKING";
     auto start2 = high_resolution_clock::now();
     E = linear::normmatmul(A,B);
     auto end2 = high_resolution_clock::now();

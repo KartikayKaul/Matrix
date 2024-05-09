@@ -2524,7 +2524,7 @@ matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
 }
 #endif
 
-template<typename DATA, typename std::enable_if_t<std::disjunction_v<std::is_same<DATA,float>,std::is_same<DATA,double>>, int> = 0>
+template<typename DATA, typename std::enable_if_t<std::disjunction_v<std::is_same<DATA,float>,std::is_same<DATA,double>, std::is_same<DATA,int>>, int> = 0>
 matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
     /*
         Utilizes SIMD instructions to perform matrix multiplication.
@@ -2551,7 +2551,7 @@ matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
         
         matrix<DATA> result(rowsA, colsB);
 
-        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 128 || colsA >= 128 || colsB >= 128)
+        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 64 || colsA >= 64 || colsB >= 64)
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
             
@@ -3223,6 +3223,12 @@ gemm(Index m, Index n, Index k,
 // works on the internal pointer
 void matrixproduct(double *c, const double* a, const double* b, int N) {
     gemm(N, N, N, 1.0, a, N, 1, b, N, 1, 0.0, c, N, 1);
+}
+void matrixproduct(float *c, const float* a, const float* b, int N) {
+    gemm(N, N, N, 1.0f, a, N, 1, b, N, 1, 0.0f, c, N, 1);
+}
+void matrixproduct(int *c, const int* a, const int* b, int N) {
+    gemm(N, N, N, 1, a, N, 1, b, N, 1, 0, c, N, 1);
 }
 
 // GEMM implemented within linear::operator&

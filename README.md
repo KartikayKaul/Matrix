@@ -18,7 +18,7 @@ Matrix multiplication operation `linear::matmul` (or `operator&`) makes use of t
 In case of `linear::matmul_simd` function, for it to work you have to add in the extra `-mavx`/`-mavx2` flag alongwith `-fopenmp`(optional but will reduce speed) flag. There are directives being used along with simd instructions so it is advised to also include OpenMP flags for the compiler. `linear::matmul_simd`only works on
 On side note, `linear::matmul_simd` performs worse than `linear::matmul` and it can be fast for matrices of sizes around 128 and 512 but beyond and below it performs badly.
 
-There is also a standalone GEMM function `linear::matrixproduct` that actually performs faster than `linear::matmul`. However, there are some limitations. It works only on square matrices of type `double`. It is demonstrated below:-
+There is also a standalone GEMM function `linear::matrixproduct` that actually performs faster than `linear::matmul`. However, there are some limitations. It works on square matrices of type `double`, `float` or `int` only. It is demonstrated below:-
 ```cpp
 const int N = 512;
 linear::matrix<double> A(N,N);

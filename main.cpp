@@ -10,7 +10,7 @@ using namespace std::chrono;
 int main(int arg, char *argv[]) {
     int N = std::atoi(argv[1]);
     
-    using TESTTYPE =  int;
+    using TESTTYPE = double;
 
     cout<<"\nGenerating two "<<N<<'x'<<N<<" random matrices with TESTTYPE values... ";
     auto alloc_time_start = high_resolution_clock::now();
@@ -55,7 +55,7 @@ int main(int arg, char *argv[]) {
     cout<<"(Normal Matrix Mul) || Time taken: "<<duration.count() <<" milliseconds\n";       
     cout<<"(SIMD Matrix Mul) || Time taken: "<<duration1.count() <<" milliseconds\n";
     cout<<"( GEMM ) || Time taken: "<<duration7.count() <<" milliseconds\n";
-    cout<<"(linear::normmatmul || Time taken: )"<<duration2.count()<<" milliseconds\n";
+    cout<<"(linear::normmatmul ) || Time taken: "<<duration2.count()<<" milliseconds\n";
     cout<<endl;
 
     // cout<<"\n";

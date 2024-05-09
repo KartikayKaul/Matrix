@@ -2962,12 +2962,21 @@ struct BlockSize<TYPE>\
 };\
 
 
-CREATE_BLOCKSIZE_SPEC(long double);
-CREATE_BLOCKSIZE_SPEC(double);
-CREATE_BLOCKSIZE_SPEC(int);
-CREATE_BLOCKSIZE_SPEC(float);
-CREATE_BLOCKSIZE_SPEC(long);
-CREATE_BLOCKSIZE_SPEC(short);
+CREATE_BLOCKSIZE_SPEC(char)
+CREATE_BLOCKSIZE_SPEC(signed char)
+CREATE_BLOCKSIZE_SPEC(unsigned char)
+CREATE_BLOCKSIZE_SPEC(short)
+CREATE_BLOCKSIZE_SPEC(unsigned short)
+CREATE_BLOCKSIZE_SPEC(int)
+CREATE_BLOCKSIZE_SPEC(unsigned int)
+CREATE_BLOCKSIZE_SPEC(long)
+CREATE_BLOCKSIZE_SPEC(unsigned long)
+CREATE_BLOCKSIZE_SPEC(long long)
+CREATE_BLOCKSIZE_SPEC(unsigned long long)
+CREATE_BLOCKSIZE_SPEC(float)
+CREATE_BLOCKSIZE_SPEC(double)
+CREATE_BLOCKSIZE_SPEC(long double)
+
 
 //-- aux routines --------------------------------------------------------------
 template <typename Index, typename Alpha, typename TX, typename TY>
@@ -3247,7 +3256,12 @@ matrix<DATA> operator&(const matrix<DATA>& A, const matrix<DATA>& B) {
     if(M <= 128 || N <= 128 || K <= 128)
         return normmatmul(A,B);
 
-    gemm(M,N,K, (DATA)1.0, A.begin(), M, 1, B.begin(), K, 1, (DATA)0.0, C.begin(), M, 1);
+    if constexpr(std::is_class_v<DATA>) {
+        if constexpr(std::is_same_v<DATA,std::complex<typename DATA::value_type>>) {
+            C = linear::normmatmul(A,B);
+        }
+    } else
+        gemm(M,N,K, (DATA)1.0, A.begin(), M, 1, B.begin(), K, 1, (DATA)0.0, C.begin(), M, 1);
     return C;
 }
 /* Reference for GEMM code above

@@ -39,7 +39,7 @@ int main(int arg, char *argv[]) {
     //benchmarking GEMM
     cout<<"\n\n GEMM  BENCHMARKING";
     auto start7 = high_resolution_clock::now();
-    //matrixproduct(J.begin(), A.begin(), B.begin(), N);
+    matrixproduct(J.begin(), A.begin(), B.begin(), N);
     auto end7 = high_resolution_clock::now();
     auto duration7 = duration_cast<milliseconds>(end7-start7);
 
@@ -58,8 +58,8 @@ int main(int arg, char *argv[]) {
     cout<<"(linear::normmatmul || Time taken: )"<<duration2.count()<<" milliseconds\n";
     cout<<endl;
 
-    cout<<"\n";
-    (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
-    cout<<"\n";
+    // cout<<"\n";
+    // (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
+    // cout<<"\n";
     return 0;
 }

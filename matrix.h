@@ -2063,7 +2063,7 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 template<typename DATA>
 matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     if(!m1.isComparable(m2))
-        throw std::domain_error("matrix - corresponding dimensions must match");
+        throw std::domain_error("linear::matrix::op== - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols(), true);
 
     #pragma omp parallel for collapse(2) if(m1.rows() >= 100 || m1.cols() >= 100)
@@ -2533,11 +2533,16 @@ matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
         faster than any implementation so far.
     */
     #if __AVX__
-        if (A.cols() != B.rows()) {
-            throw std::domain_error("linear::matmul_simd - Internal dimensions do not match.");
-        }
-        if(A.cols()%8!=0) {
-            throw std::invalid_argument("linear::matmul_simd - Internal dimensions must be a multiple of 8.");
+        try {
+            if(A.cols()%8 != 0) {
+                throw std::invalid_argument("linear::matmul_simd - Internal dimensions must be a multiple of 8.");
+            }
+            if (A.cols() != B.rows()) {
+                throw std::domain_error("linear::matmul_simd - Internal dimensions do not match.");
+            }
+        } catch(std::exception &e) {
+            std::cerr<<'\n'<<e.what()<<'\n';
+            exit(0);
         }
 
         int rowsA = A.rows();
@@ -2569,7 +2574,14 @@ matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
             }
         return result;
     #else
-        throw std::runtime_error("linear::matmul_simd - SIMD instructions never compiled. See if you used `-mavx` flag.");
+    try {
+        throw std::runtime_error("linear::matmul_simd - SIMD instructions never compiled. Enable simd-intrinsics using correct compiler flag.");
+    } catch(std::exception &e ){
+        std::cerr<<'\n'
+                <<e.what()
+                <<'\n';
+        exit(0);
+    }
     #endif
 }
 

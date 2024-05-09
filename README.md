@@ -82,6 +82,8 @@ The benchmarked times are averaged over 1000 iterations for double matrices of s
 
 
 
+There are several other function calls for matrix multiplication in the library. Each has its own specialty, negatives and positives. There is a non-parallelized version of `linear::para_strassen_multiply`
+
 ## Documentation
  You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 

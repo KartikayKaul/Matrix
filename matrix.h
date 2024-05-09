@@ -2524,7 +2524,8 @@ matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
 }
 #endif
 
-matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
+template<typename DATA, typename std::enable_if_t<std::disjunction_v<std::is_same<DATA,float>,std::is_same<DATA,double>>, int> = 0>
+matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
     /*
         Utilizes SIMD instructions to perform matrix multiplication.
         In short benchmark, the results of OpenMP parallelization
@@ -2533,30 +2534,34 @@ matrix<double> matmul_simd(const matrix<double>& A, const matrix<double>& B) {
     */
     #if __AVX__
         if (A.cols() != B.rows()) {
-            throw std::invalid_argument("linear::matmul_simd - Internal dimensions do not match.");
+            throw std::domain_error("linear::matmul_simd - Internal dimensions do not match.");
         }
+        if(A.cols()%8!=0) {
+            throw std::invalid_argument("linear::matmul_simd - Internal dimensions must be a multiple of 8.");
+        }
+
         int rowsA = A.rows();
         int colsA = A.cols();
         int colsB = B.cols();
         
-        matrix<double> result(rowsA, colsB);
-        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 64 || colsA >= 64 || colsB >= 64)
+        matrix<DATA> result(rowsA, colsB);
+
+        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 128 || colsA >= 128 || colsB >= 128)
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
-                __m256d sum = _mm256_setzero_pd();  // Initialize sum vector with zeros
-                
+            
+                __m256d sum = _mm256_setzero_pd();
                 for (int k = 0; k < colsA; k+=8) {
-                    
                     __m256d a1 = _mm256_set_pd(A(i, k + 3), A(i, k + 2), A(i, k + 1), A(i, k));
                     __m256d b1 = _mm256_set_pd(B(k + 3, j), B(k + 2, j), B(k + 1, j), B(k, j));
-
+                    
                     __m256d a2 = _mm256_set_pd(A(i, k + 3 + 4), A(i, k + 2 + 4), A(i, k + 1 + 4), A(i, k + 4));
                     __m256d b2 = _mm256_set_pd(B(k + 3 + 4, j), B(k + 2 + 4, j), B(k + 1 + 4, j), B(k + 4, j));
 
-                    // Perform SIMD multiplication and addition
                     sum = _mm256_add_pd(sum, _mm256_mul_pd(a1, b1));
                     sum = _mm256_add_pd(sum, _mm256_mul_pd(a2, b2));
-                }
+                } // k-loop ends here
+
                 alignas(32) double temp[4];
                 _mm256_store_pd(temp, sum);
                 result(i, j) = temp[0] + temp[1] + temp[2] + temp[3];
@@ -2825,8 +2830,10 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
 }
 
 /*  
-    GENERAL MATRIX MULTIPLY IMPLEMENTATION (GEMM) 
-    References provided at the end
+    GENERAL MATRIX MULTIPLY IMPLEMENTATION (GEMM) SECTION 
+    BLIS framework based gemm implementation.
+    References provided at the end.
+    This part of the code might later be moved to another header file.
 */
 //-- malloc with alignment --------------------------------------------------------
 void *
@@ -2922,82 +2929,33 @@ struct BlockSize
     static_assert(NC % NR == 0, "NC must be a multiple of NR.");
 };
 
+// macro to copy paste the class template specialization for Blocksize
+#define CREATE_BLOCKSIZE_SPEC(TYPE) template<>\
+struct BlockSize<TYPE>\
+{\
+    static constexpr int MC     = BS_D_MC;\
+    static constexpr int KC     = BS_D_KC;\
+    static constexpr int NC     = BS_D_NC;\
+    static constexpr int MR     = BS_D_MR;\
+    static constexpr int NR     = BS_D_NR;\
+\
+    static constexpr int rwidth = SIMD_REGISTER_WIDTH;\
+    static constexpr int align  = rwidth / 8;\
+    static constexpr int vlen   = rwidth / (8*sizeof(TYPE));\
+\
+    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");\
+    static_assert(MC % MR == 0, "MC must be a multiple of MR.");\
+    static_assert(NC % NR == 0, "NC must be a multiple of NR.");\
+    static_assert(rwidth % sizeof(TYPE) == 0, "SIMD register width not sane.");\
+};\
 
-template <>
-struct BlockSize<double>
-{
-    static constexpr int MC     = BS_D_MC;
-    static constexpr int KC     = BS_D_KC;
-    static constexpr int NC     = BS_D_NC;
-    static constexpr int MR     = BS_D_MR;
-    static constexpr int NR     = BS_D_NR;
 
-    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
-    static constexpr int align  = rwidth / 8;
-    static constexpr int vlen   = rwidth / (8*sizeof(double));
-
-    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
-    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
-    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
-    static_assert(rwidth % sizeof(double) == 0, "SIMD register width not sane.");
-};
-
-template <>
-struct BlockSize<int>
-{
-    static constexpr int MC     = BS_D_MC;
-    static constexpr int KC     = BS_D_KC;
-    static constexpr int NC     = BS_D_NC;
-    static constexpr int MR     = BS_D_MR;
-    static constexpr int NR     = BS_D_NR;
-
-    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
-    static constexpr int align  = rwidth / 8;
-    static constexpr int vlen   = rwidth / (8*sizeof(int));
-
-    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
-    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
-    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
-    static_assert(rwidth % sizeof(int) == 0, "SIMD register width not sane.");
-};
-
-template <>
-struct BlockSize<float>
-{
-    static constexpr int MC     = BS_D_MC;
-    static constexpr int KC     = BS_D_KC;
-    static constexpr int NC     = BS_D_NC;
-    static constexpr int MR     = BS_D_MR;
-    static constexpr int NR     = BS_D_NR;
-
-    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
-    static constexpr int align  = rwidth / 8;
-    static constexpr int vlen   = rwidth / (8*sizeof(float));
-
-    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
-    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
-    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
-    static_assert(rwidth % sizeof(float) == 0, "SIMD register width not sane.");
-};
-
-template <>
-struct BlockSize<long>
-{
-    static constexpr int MC     = BS_D_MC;
-    static constexpr int KC     = BS_D_KC;
-    static constexpr int NC     = BS_D_NC;
-    static constexpr int MR     = BS_D_MR;
-    static constexpr int NR     = BS_D_NR;
-
-    static constexpr int rwidth = SIMD_REGISTER_WIDTH;
-    static constexpr int align  = rwidth / 8;
-    static constexpr int vlen   = rwidth / (8*sizeof(long));
-
-    static_assert(MC>0 && KC>0 && NC>0 && MR>0 && NR>0, "Invalid block size.");
-    static_assert(MC % MR == 0, "MC must be a multiple of MR.");
-    static_assert(NC % NR == 0, "NC must be a multiple of NR.");
-    static_assert(rwidth % sizeof(long) == 0, "SIMD register width not sane.");
-};
+CREATE_BLOCKSIZE_SPEC(long double);
+CREATE_BLOCKSIZE_SPEC(double);
+CREATE_BLOCKSIZE_SPEC(int);
+CREATE_BLOCKSIZE_SPEC(float);
+CREATE_BLOCKSIZE_SPEC(long);
+CREATE_BLOCKSIZE_SPEC(short);
 
 //-- aux routines --------------------------------------------------------------
 template <typename Index, typename Alpha, typename TX, typename TY>
@@ -3281,6 +3239,5 @@ https://stackoverflow.com/a/35637007
 Inspired by the BLIS framework:-
 https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf
 */
-
 }//linear namespace ends
 #endif // MATRIX_H

@@ -1,12 +1,13 @@
 #include<iostream>
-
+#include<chrono>
 #include "../matrix.h"
 #include "../matview.h"
 
 using namespace std;
 using namespace linear;
+using namespace std::chrono;
 
-int main() {
+int main(int argc, char* argv[]) {
 
     /* Initializing matrices
         There are several ways to initialize a linear::matrix.
@@ -135,6 +136,17 @@ int main() {
     moreThan2Data.getDims().display();
     //In case of trying to attempt != you can simply do !(A==B)
 
+
+    int M = std::atoi(argv[1]);
+    double alpha = 0.01;
+    matrix<double> bohotbada = randomNormal<double>(M,1);
+    matrix<double> andhadundh = randomNormal<double>(M,1);
+    matrix<double> result;
+    auto start = high_resolution_clock::now();
+    result = alpha*bohotbada + andhadundh;
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(end - start);
+    cout<<"\nAXPY Timing: "<<duration.count()<<'\n';
 
     return 0;
 }

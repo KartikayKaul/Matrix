@@ -14,8 +14,8 @@ int main(int arg, char *argv[]) {
 
     cout<<"\nGenerating two "<<N<<'x'<<N<<" random matrices with TESTTYPE values... ";
     auto alloc_time_start = high_resolution_clock::now();
-    matrix<TESTTYPE> A = randomUniform(N,N);
-    matrix<TESTTYPE> B = randomUniform(N,N);
+    matrix<TESTTYPE> A = randomNormal(N,N);
+    matrix<TESTTYPE> B = randomNormal(N,N);
     auto alloc_time_end = high_resolution_clock::now();
     auto alloc_dur = duration_cast<milliseconds>(alloc_time_end-alloc_time_start);
     cout<<"\nAllocation Complete. Time taken: "<<alloc_dur.count()<<" milliseconds.\n";
@@ -58,8 +58,8 @@ int main(int arg, char *argv[]) {
     cout<<"(linear::normmatmul ) || Time taken: "<<duration2.count()<<" milliseconds\n";
     cout<<endl;
 
-    // cout<<"\n";
-    // (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
-    // cout<<"\n";
+    cout<<"\n";
+    (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
+    cout<<"\n";
     return 0;
 }

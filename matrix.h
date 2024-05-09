@@ -655,9 +655,9 @@ matrix<double> randomUniform(int, int, double minVal=0., double maxVal=1.);
 matrix<int> randomUniformInt(int, int, int);
 matrix<int> randomUniformInt(int, int, int, int);
 
-template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA, typename std::enable_if_t<std::is_floating_point_v<DATA>, int> = 0>
 matrix<DATA> randomNormal(int, DATA mean=0., DATA std=1.);
-template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA, typename std::enable_if_t<std::is_floating_point_v<DATA>, int> = 0>
 matrix<DATA> randomNormal(int, int, DATA mean=0., DATA std=1.);
 
 matrix<double> randomNormal(int, int, double mean=0., double std=1.);
@@ -1928,7 +1928,7 @@ matrix<double> randomNormal(int n, int m, double mean, double std) {
 }
 
 // random nxm matrix from normal distribution
-template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA, typename std::enable_if_t<std::is_floating_point_v<DATA>, int>>
 matrix<DATA> randomNormal(int n, int m, DATA mean, DATA std) {
     matrix<DATA> mat(n,m);
 
@@ -1944,7 +1944,7 @@ matrix<DATA> randomNormal(int n, int m, DATA mean, DATA std) {
 }
 
 // random nxn matrix from normal distribution
-template<typename DATA,typename std::enable_if_t<std::is_floating_point_v<DATA>>>
+template<typename DATA, typename std::enable_if_t<std::is_floating_point_v<DATA>, int>>
 matrix<DATA> randomNormal(int n, DATA mean, DATA std) {
     matrix<DATA> mat(n);
 
@@ -1979,7 +1979,7 @@ matrix<DATA> &matrix<DATA>::operator*=(const ATAD value) {
         newVal = static_cast<DATA>(value);
     }
 
-    #pragma omp parallel for if(row*col >= 100)
+    #pragma omp parallel for if(cols() > 64 || rows() > 64)
     for(int i=0; i < row*col; ++i)
         *(val + i) *= newVal;
     return *this;
@@ -1993,7 +1993,7 @@ matrix<DATA> &matrix<DATA>::operator/=(const ATAD value) {
     } else {
         newVal = static_cast<DATA>(value);
     }
-    #pragma omp parallel for if(row*col >= 100)
+    #pragma omp parallel for if(cols() > 64 || rows() > 64)
     for(int i=0; i < row*col; ++i)
         *(val + i) /= newVal;
     return *this;
@@ -2004,7 +2004,7 @@ matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
     if(!this->isComparable(m1))
         throw std::invalid_argument("Dimensions do not match.");
     else {
-        #pragma omp parallel for if(row*col >= 100)
+        #pragma omp parallel for if(cols() > 64 || rows() > 64)
         for(int i=0; i<this->rows()*this->cols(); ++i)
             *(val + i) -= m1(i/m1.cols(), i%m1.cols());
     }
@@ -2013,7 +2013,7 @@ matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
 template<typename DATA>
 matrix<DATA> &matrix<DATA>::operator-=(const DATA value) {
 
-    #pragma omp parallel for if(row*col >= 100)
+    #pragma omp parallel for if(cols() > 64 || rows() > 64)
     for(int i=0; i<this->rows()*this->cols(); ++i)
         *(val + i) -= value;
     return *this;
@@ -2053,7 +2053,7 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::invalid_argument("Corresponding dimensions do not match for element-wise multiplication.");
     }
     matrix<DATA> product(m1.rows(), m1.cols(), (DATA)1);
-    #pragma omp parallel for if(m1.rows()*m1.cols() >= 100)
+    #pragma omp parallel for if(m1.cols() > 64 || m1.rows() > 64)
     for(int i=0; i<m1.rows()*m1.cols(); ++i){
         product(i/m1.cols(), i%m1.cols()) *= (m1(i/m1.cols(), i%m1.cols()) * m2(i/m2.cols(), i%m2.cols()));
     }
@@ -2066,7 +2066,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("linear::matrix::op== - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols(), true);
 
-    #pragma omp parallel for collapse(2) if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for collapse(2) if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); ++i)
         for(int j=0; j<m1.cols(); ++j)
                 if(std::abs(m1(i,j) - m2(i,j)) > PRECISION_TOL(DATA) )
@@ -2084,7 +2084,7 @@ matrix<bool> operator==(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
             if(std::abs(m1(i,j) - tval) > PRECISION_TOL(DATA))
@@ -2104,7 +2104,7 @@ matrix<bool> operator<(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols());
 
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
                 res(i,j) = m1(i,j)<m2(i,j);
@@ -2121,7 +2121,7 @@ matrix<bool> operator<(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100) 
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64) 
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) < tval;
@@ -2140,7 +2140,7 @@ matrix<bool> operator>(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols());
 
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
                 res(i,j) = m1(i,j)>m2(i,j);
@@ -2157,7 +2157,7 @@ matrix<bool> operator>(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100) 
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64) 
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) > tval;
@@ -2175,7 +2175,7 @@ matrix<bool> operator>(const ATAD value, const matrix<DATA>& m1) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) < tval;
@@ -2189,7 +2189,7 @@ matrix<bool> operator>=(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols());
 
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
                 res(i,j) = m1(i,j)>=m2(i,j);
@@ -2206,7 +2206,7 @@ matrix<bool> operator>=(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100) 
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64) 
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) >= tval;
@@ -2224,7 +2224,7 @@ matrix<bool> operator>=(const ATAD value, const matrix<DATA>& m1) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) <= tval;
@@ -2238,7 +2238,7 @@ matrix<bool> operator<=(const matrix<DATA>& m1, const matrix<DATA>& m2) {
         throw std::domain_error("matrix - corresponding dimensions must match");
     matrix<bool> res(m1.rows(), m1.cols());
 
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++)
                 res(i,j) = m1(i,j)<=m2(i,j);
@@ -2255,7 +2255,7 @@ matrix<bool> operator<=(const matrix<DATA>& m1, const ATAD value) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100) 
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64) 
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) <= tval;
@@ -2273,7 +2273,7 @@ matrix<bool> operator<=(const ATAD value, const matrix<DATA>& m1) {
     } else {
         tval = value;
     }
-    #pragma omp parallel for if(m1.rows() >= 100 || m1.cols() >= 100)
+    #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
     for(int i=0; i<m1.rows(); i++)
         for(int j=0; j<m1.cols(); j++) {
                 res(i,j) = m1(i,j) >= tval;
@@ -2288,31 +2288,9 @@ matrix<DATA>& matrix<DATA>::operator+=(const matrix<DATA>& m1) {
     else {
         int Size = this->rows() * this->cols();
 
-        #ifdef __AVX__
-        if constexpr (std::is_same_v<DATA, float>) {
-            for (int i = 0; i < Size; i += 8) {
-                __m256 vec1 = _mm256_loadu_ps(this->val + i);
-                __m256 vec2 = _mm256_loadu_ps(&m1(i / m1.cols(), i % m1.cols()));
-                vec1 = _mm256_add_ps(vec1, vec2);
-                _mm256_storeu_ps(this->val + i, vec1);
-            }
-        } else if constexpr (std::is_same_v<DATA, double>) {
-            for (int i = 0; i < Size; i += 4) {
-                __m256d vec1 = _mm256_loadu_pd(this->val + i);
-                __m256d vec2 = _mm256_loadu_pd(&m1(i / m1.cols(), i % m1.cols()));
-                vec1 = _mm256_add_pd(vec1, vec2);
-                _mm256_storeu_pd(this->val + i, vec1);
-            }
-        } else {
-            
-            for (int i = 0; i < Size; ++i)
-                *(this->val + i) += m1(i / m1.cols(), i % m1.cols());
-        }
-        #else
-       
+        #pragma omp parallel for if(rows() > 64 || cols() > 64)
         for (int i = 0; i < Size; ++i)
             *(this->val + i) += m1(i / m1.cols(), i % m1.cols());
-        #endif
     }
     return *this;
 }
@@ -2320,32 +2298,10 @@ template<typename DATA>
 matrix<DATA>& matrix<DATA>::operator+=(const DATA value) {
     int Size = this->rows() * this->cols();
 
-    #ifdef __AVX__
-    if constexpr (std::is_same_v<DATA, float>) {
-        for(int i=0; i<Size; i+=8) {
-            __m256 vec = _mm256_loadu_ps(this->val + i);
-            __m256 valueVec = _mm256_set1_ps(static_cast<float>(value));
-            vec = _mm256_add_ps(vec, valueVec);
-            _mm256_storeu_ps(this->val + i, vec);
-        }
-    } else if constexpr (std::is_same_v<DATA, double>) {
-        for(int i=0; i<Size; i+=4) {
-            __m256d vec = _mm256_loadu_pd(this->val + i);
-            __m256d valueVec = _mm256_set1_pd(value);
-            vec = _mm256_add_pd(vec, valueVec);
-            _mm256_storeu_pd(this->val + i, vec);
-        }
-    } else {
-        for(int i=0; i<Size; ++i) {
-            *(this->val + i) += value;
-        }
-    }
-    #else
+    #pragma omp parallel for if(rows() > 64 || cols() > 64)
     for(int i=0; i<Size; ++i) {
         *(this->val + i) += value;
     }
-    #endif
-
     return *this;
 }
 
@@ -2364,36 +2320,12 @@ matrix<DATA> operator+(const matrix<DATA>& m1, const double value) {
     int Size = m1.rows() * m1.cols();
     matrix<DATA> resMat = m1;
 
-    #ifdef __AVX__
-    if constexpr (std::is_same_v<DATA, float>) {
-        for(int i=0; i<Size; i+=8) {
-            __m256 vec = _mm256_loadu_ps(&resMat(i/resMat.cols(), i%resMat.cols()));
-            __m256 valueVec = _mm256_set1_ps(static_cast<float>(value));
-            vec = _mm256_add_ps(vec, valueVec);
-            _mm256_storeu_ps(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
-        }
-    } else if constexpr (std::is_same_v<DATA, double>) {
-       for(int i=0; i<Size; i+=4) {
-            __m256d vec = _mm256_loadu_pd(&resMat(i/resMat.cols(), i%resMat.cols()));
-            __m256d valueVec = _mm256_set1_pd(value);
-            vec = _mm256_add_pd(vec, valueVec);
-            _mm256_storeu_pd(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
-       }
-    } else {
-        #pragma omp parallel for 
-        for(int i=0; i<Size; ++i) {
-            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
-            temp += value;
-            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
-        }
+    #pragma omp parallel for if(m1.rows() > 64 || m1.cols() > 64)
+    for(int i=0; i<Size; ++i) {
+        DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+        temp += value;
+        resMat(i/resMat.cols(), i%resMat.cols()) = temp;
     }
-    #else //if intrinsics not present
-        for(int i=0; i<Size; ++i) {
-            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
-            temp += value;
-            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
-        }
-    #endif
     return resMat;
 }
 template<typename DATA>
@@ -2415,35 +2347,12 @@ matrix<DATA> operator-(const matrix<DATA>& m1, const double value) {
     int Size = m1.rows() * m1.cols();
     matrix<DATA> resMat = m1;
 
-    #ifdef __AVX__
-    if constexpr (std::is_same_v<DATA, float>) {
-        for(int i=0; i<Size; i+=8) {
-            __m256 vec = _mm256_loadu_ps(&resMat(i/resMat.cols(), i%resMat.cols()));
-            __m256 valueVec = _mm256_set1_ps(static_cast<float>(value));
-            vec = _mm256_sub_ps(vec, valueVec);
-            _mm256_storeu_ps(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
-        }
-    } else if constexpr (std::is_same_v<DATA, double>) {
-        for(int i=0; i<Size; i+=4) {
-            __m256d vec = _mm256_loadu_pd(&resMat(i/resMat.cols(), i%resMat.cols()));
-            __m256d valueVec = _mm256_set1_pd(value);
-            vec = _mm256_sub_pd(vec, valueVec);
-            _mm256_storeu_pd(&resMat(i/resMat.cols(), i%resMat.cols()), vec);
-        }
-    } else {
-        for(int i=0; i<Size; ++i) {
-            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
-            temp -= value;
-            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
-        }
+    #pragma omp parallel for if(m1.rows() > 64 || m1.cols() > 64)
+    for(int i=0; i<Size; ++i) {
+        DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
+        temp -= value;
+        resMat(i/resMat.cols(), i%resMat.cols()) = temp;
     }
-    #else //if intrinsics not present
-        for(int i=0; i<Size; ++i) {
-            DATA temp = resMat(i/resMat.cols(), i%resMat.cols());
-            temp -= value;
-            resMat(i/resMat.cols(), i%resMat.cols()) = temp;
-        }
-    #endif
     return resMat;
 }
 template<typename DATA>
@@ -2451,14 +2360,15 @@ matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
     return m2-value;
 }
 
-/// MATRIX MULTIPLICATION
+// linear::normmatmul - replacement for lower matrices
 template<typename DATA>
 matrix<DATA> normmatmul(const matrix<DATA> &m1,const matrix<DATA> &m2) {
     if(m1.cols() != m2.rows()) {
-        throw std::invalid_argument("linear::matmul - Internal dimensions do not match.");   
+        throw std::invalid_argument("linear:matmul - Internal dimensions do not match.");   
     }
     matrix<DATA> m(m1.rows(), m2.cols(), DATA(0.));
 
+    #pragma omp parallel for shared(m, m1, m2) if(m1.cols() > 32 || m1.rows() > 32 || m2.cols() > 32)
     for(int i=0; i<m1.rows(); ++i) {
         for(int k=0; k<m2.rows(); ++k) {
             for(int j=0; j<m2.cols(); ++j)
@@ -2551,7 +2461,7 @@ matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
         
         matrix<DATA> result(rowsA, colsB);
 
-        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 64 || colsA >= 64 || colsB >= 64)
+        #pragma omp parallel for collapse(2) shared(A,B,result) if(rowsA >= 32 || colsA >= 32 || colsB >= 32)
         for (int i = 0; i < rowsA; ++i) {
             for (int j = 0; j < colsB; ++j) {
             
@@ -2761,6 +2671,7 @@ matrix<double> tril(int size, double mean, double std) {
     return lower_triangle_matrix(size, mean, std);
 }
 
+//-------- UTILS for initializing pointer arrays ------- //
 template<typename DATA>
 void init2dArray(DATA *array, int size_0, int size_1) {
     /*
@@ -2840,6 +2751,7 @@ void init2dRandArray(std::complex<double> *array, int size_0, int size_1, double
         }
     }
 }
+// ---- UTIL FUNCTIONS END HERE ------ //
 
 /*  
     GENERAL MATRIX MULTIPLY IMPLEMENTATION (GEMM) SECTION 

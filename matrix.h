@@ -15,6 +15,7 @@
 #include<complex>
 #include<type_traits>
 #include<x86intrin.h>
+#include<cassert>
 
 // Check if g++ or clang used except INTEL
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
@@ -88,15 +89,10 @@ struct TypeName { //defaulting case if i missed any numerical type
 DEFINE_TYPENAME_FOR_TYPE(bool)
 DEFINE_TYPENAME_FOR_TYPE(char)
 DEFINE_TYPENAME_FOR_TYPE(signed char)
-DEFINE_TYPENAME_FOR_TYPE(unsigned char)
 DEFINE_TYPENAME_FOR_TYPE(short)
-DEFINE_TYPENAME_FOR_TYPE(unsigned short)
 DEFINE_TYPENAME_FOR_TYPE(int)
-DEFINE_TYPENAME_FOR_TYPE(unsigned int)
 DEFINE_TYPENAME_FOR_TYPE(long)
-DEFINE_TYPENAME_FOR_TYPE(unsigned long)
 DEFINE_TYPENAME_FOR_TYPE(long long)
-DEFINE_TYPENAME_FOR_TYPE(unsigned long long)
 DEFINE_TYPENAME_FOR_TYPE(float)
 DEFINE_TYPENAME_FOR_TYPE(double)
 DEFINE_TYPENAME_FOR_TYPE(long double)
@@ -134,13 +130,13 @@ class matrix {
 
     // memory allocation for internal data structure holding the values
     void getMemoryforVal(int r, int c) {
-        if(r<1 || c<1)
-            throw std::invalid_argument("getMemoryforVal() - invalid dimension values.");
         try {
+            if(r<1 || c<1)
+            throw std::invalid_argument("Invalid dimension values.");
             val = new DATA[r*c];
-        } catch (const std::bad_alloc& e) {
-            std::cerr << "Heap memory allocation failed: " << e.what() << "\n";
-            throw;
+        } catch (const std::exception& e) {
+            std::cerr << "linear::getMemoryforVal() - Heap memory allocation failed. " << e.what() << "\n";
+            exit(0);
         }
         this->row = r;
         this->col = c;
@@ -208,8 +204,13 @@ class matrix {
 
         //swap matrices contents
         void swapValues(matrix<DATA>& other) {
-            if(other.rows() != this->rows() || other.cols() != this->cols()) {
-                throw std::domain_error("swapValues() - matrices have different dimensions.\n");
+            try {
+                if(other.rows() != this->rows() || other.cols() != this->cols()) {
+                    throw std::domain_error("linear::swapValues() - matrices have different dimensions.\n");
+            }
+            } catch (const std::exception& e) {
+                std::cerr<<e.what();
+                exit(0);
             }
             std::swap_ranges(this->first, this->last, other.first);
         }
@@ -686,11 +687,13 @@ std::vector<std::vector<DATA>> matrix<DATA>::toVector() {
 /// IOTA
 template<typename DATA>
 void matrix<DATA>::iota(int start) {
-    if (!std::is_arithmetic<DATA>::value || std::is_same<DATA,bool>::value)
-        throw std::domain_error("matrix should only be arithmetic type.");
-
-    if(this->rows() < 1 || this->cols() < 1)
-        throw std::out_of_range("matrix is an empty matrix. Inflate it with memory first.");
+    try {
+        if(this->rows() < 1 || this->cols() < 1)
+            throw std::out_of_range("linear::matrix::iota - Empty matrix. Inflate it with memory first.\n");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     
     #pragma omp parallel for if(this->rows() >= 100 || this->cols() >= 100)
     for(DATA* itr = this->first; itr != this->last; ++itr)
@@ -700,8 +703,13 @@ void matrix<DATA>::iota(int start) {
 /// RESHAPE METHOD DEFINITION
 template<typename DATA>
 matrix<DATA> matrix<DATA>::reshape(int newRow, int newCol) {
-    if(newRow * newCol != (this->cols())*(this->rows())){
-        throw std::invalid_argument("The product of dimensions do not match the product of dimensions of the given matrix.");
+    try {
+        if(newRow * newCol != (this->cols())*(this->rows())){
+         throw std::invalid_argument("linear::matrix::reshape - The product of dimensions do not match the product of dimensions of the given matrix.\n");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<< e.what();
+        exit(0);
     }
 
     matrix<DATA> reshapedMatrix(newRow, newCol);
@@ -730,10 +738,15 @@ void matrix<DATA>::pickPivotFullPivoting(int startRow, int& pivotRow, int& pivot
 /// SWAP OPERATIONS 
 template<typename DATA>
 void matrix<DATA>::swapRows(int row1, int row2) {
-    if( !isValidIndex(row1, 0) || !isValidIndex(row2, 0)) {
-        throw std::invalid_argument("Row dim indices are wrong.\n");
-        return;
+    try {
+       if( !isValidIndex(row1, 0) || !isValidIndex(row2, 0)) {
+            throw std::out_of_range("linear::matrix::swapRows - row indices are out of range.\n");
+        } 
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
+
     #pragma omp parallel for if(this->cols() >= 100)
     for(int j=0; j<col; ++j) {
         DATA temp = *(val + row1*col + j);
@@ -743,9 +756,13 @@ void matrix<DATA>::swapRows(int row1, int row2) {
 }
 template<typename DATA>
 void matrix<DATA>::swapCols(int col1, int col2) {
-    if( !isValidIndex(0, col1) || !isValidIndex(0, col2)) {
-        throw std::invalid_argument("Column dim indices are wrong.\n");
-        return;
+    try {
+        if( !isValidIndex(0, col1) || !isValidIndex(0, col2)) {
+            throw std::out_of_range("linear::matrix::swapCols - column indices are out of range.\n");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
 
     #pragma omp parallel for if(this->rows() >= 100)
@@ -770,9 +787,13 @@ void matrix<DATA>::gaussianElimination(matrix<DATA>& augMat, int n, int m) {
                 pivotRow = k;
             }
         }
-
-        if(augMat(pivotRow,i) == 0) {
-            throw std::domain_error("Matrix is singular. Cannot find inverse.");
+        try {
+            if(augMat(pivotRow,i) == 0) {
+                throw std::domain_error("linear::gaussianElimination - Matrix is singular. Cannot find inverse.");
+            }
+        } catch(std::exception &e) {
+            std::cerr<<e.what()<<'\n';
+            exit(0);
         }
 
         //swapping rows in augMat
@@ -805,13 +826,17 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
     int n = this->row;
     int m = this->col; // n x m dims
 
-    if( n != m) {
-        throw std::length_error("`solve` operation is only applicable to square matrices.");
-    }
-
-    // validate the shape of b
-    if( b.rows() != n || b.cols() != 1) {
-        throw std::invalid_argument("The dimensions do not match with A.");
+    try {
+        if( n != m) {
+            throw std::length_error("linear::matrix::solve is only applicable to square matrices.\n");
+        }
+        // validate the shape of b
+        if( b.rows() != n || b.cols() != 1) {
+            throw std::invalid_argument("linear::matrix::solve - b has invalid dimensions.\n");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
     
     matrix<DATA> augMat = this->hStack(b); // [A | b]
@@ -826,7 +851,8 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
 ///// Min
 template<typename DATA>
 matrix<DATA> matrix<DATA>::min(int dim) {
-     DATA minElem;
+    assert(dim>=-1 && dim<=1);
+    DATA minElem;
     if(dim == -1) {
             /* Returns a 1x1 matrix of max value */
             matrix<DATA> m0(1,1);
@@ -843,7 +869,6 @@ matrix<DATA> matrix<DATA>::min(int dim) {
      else {
     
         if(dim == 0) {
-
                 /* Returns a 1xcol matrix of max value in each jth column
                 this operation is performed along the 0th axis (row axis)
                 */
@@ -876,8 +901,9 @@ matrix<DATA> matrix<DATA>::min(int dim) {
                     m2.insertAt(minElem, i, 0);
                }
               return m2;
-            } else {
-                throw std::invalid_argument("Invalid dim index used.");
+            }
+            else {
+                return matrix();
             }
         } 
     }
@@ -1005,7 +1031,6 @@ matrix<DATA> matrix<DATA>::max(int dim) {
                     Returns a rowx1 matrix of max value in each ith row
                     this operation is performed along the 1th axis (col axis)
                 */
-
                matrix<DATA> m2(this->row, 1);
                for(int i=0; i<this->row; ++i) {
                     maxElem = *(val + i*(this->col));
@@ -1134,13 +1159,14 @@ DATA matrix<DATA>::item() const{
     if(this->row == 1  && this->col == 1) {
         return *val; 
     } else {
-        throw std::invalid_argument("linear::matrix::item() - To throw an item out it is supposed to be 1x1 matrix.");
+        std::cerr<<"linear::matrix::item() - To throw an item out it is supposed to be 1x1 matrix.";
+        exit(0);
     }
 }
 
 template<typename DATA>
  bool matrix<DATA>::all(bool value) const {
-    static_assert(std::is_same_v<DATA,bool>, "all() is only supported for boolean matrices.");
+    static_assert(std::is_same_v<DATA,bool>, "linaear::matrix::all is only supported for boolean matrices.");
     
     for(int i=0; i<this->rows(); ++i) {
         for(int j=0; j<this->cols(); ++j) {
@@ -1154,7 +1180,7 @@ template<typename DATA>
 
 template<typename DATA>
 bool matrix<DATA>::isany(bool value) const {
-    static_assert(std::is_same_v<DATA,bool>, "isany() is only supported for boolean matrices.");
+    static_assert(std::is_same_v<DATA,bool>, "linear::matrix::isany is only supported for boolean matrices.");
     
     for(int i=0; i<this->rows(); ++i) {
         for(int j=0; j<this->cols(); ++j) {
@@ -1177,9 +1203,13 @@ matrix<DATA> matrix<DATA>::stack(matrix const& obj, bool vert) {
 
 template<typename DATA>
 matrix<DATA> matrix<DATA>::hStack(matrix const& obj) {
-    if(this->row != obj.row)
-        throw std::invalid_argument("The row dimensions do not match.");
-    
+    try {
+        if(this->row != obj.row)
+            throw std::invalid_argument("linear::matrix::hStack - The row dimensions do not match.\n");
+    } catch(const std::exception& e) {
+        std::cerr<<<e.what();
+        exit(0);
+    }
     // initialize the augmented matrix
     matrix<DATA> m(this->row, this->col + obj.col);
     for(int i=0; i<m.row; ++i) {
@@ -1194,8 +1224,13 @@ matrix<DATA> matrix<DATA>::hStack(matrix const& obj) {
 
 template<typename DATA>
 matrix<DATA> matrix<DATA>::vStack(matrix const& obj) {
-    if(this->col != obj.col)
-        throw std::invalid_argument("The column dimensions do not match.");
+    try {
+        if(this->col != obj.col)
+            throw std::invalid_argument("linear::matrix::vStack - The column dimensions do not match.\n");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
 
     // initialize our augmented matrix
     matrix<DATA> m(this->row + obj.row, this->col);
@@ -1214,8 +1249,13 @@ matrix<DATA> matrix<DATA>::inv() {
     int n = this->row;
     int m = this->col;
 
-    if(n != m) {
-        std::length_error("Inverse cannot be calculated for non-square matrices.");
+    try {
+        if(n != m) {
+            throw std::length_error("linear::matrix::inv- Inverse cannot be calculated for non-square matrices.");
+        }
+    } catch(std::exception &e) {
+        std::cerr<<e.what()<<'\n';
+        exit(0);
     }
 
     matrix<DATA> I = eye<DATA>(n); // nxn Identity matrix
@@ -1233,8 +1273,12 @@ matrix<DATA> matrix<DATA>::inv() {
 template<typename DATA>
 double matrix<DATA>::det(bool fullPivot) {
     // check that matrix is square
+    try {
     if(!isSquare()) {
-        throw std::domain_error("Determinant not defined for non-square matrices.");
+            throw std::domain_error("linear::matrix::det- not defined for non-square matrices.\n");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
     }
 
     // get dimensions
@@ -1317,9 +1361,15 @@ double matrix<DATA>::det(bool fullPivot) {
 // Operator overloading for operator<< for chaining values into the matrix
 template<typename DATA>
 matrix<DATA>& matrix<DATA>::operator<<(const DATA& value) {
-    if(cur_row >= row || cur_col >= col)
-        throw std::out_of_range("operator<< - Index out of range. Matrix is filled.");
+    try{
+        if(cur_row >= row || cur_col >= col)
+            throw std::out_of_range("linear::operator<< - Index out of range. Matrix is filled.\n");
     
+    } catch(std::exception &e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
+
     this->val[cur_row*col + cur_col++] = value;
     if(cur_col == col) {
         cur_col = 0;
@@ -1327,13 +1377,17 @@ matrix<DATA>& matrix<DATA>::operator<<(const DATA& value) {
     }
     return *this;
 }
-
 template<typename DATA>
 template<typename ATAD, typename std::enable_if_t<is_numeric_v<ATAD>>>
 matrix<DATA>& matrix<DATA>::operator<<(const ATAD& value) {
-    if(cur_row >= row || cur_col >= col)
-        throw std::out_of_range("operator<< - Index out of range. Matrix is filled.");
-    
+    try {
+        if(cur_row >= row || cur_col >= col)
+            throw std::out_of_range("operator<< - Index out of range. Matrix is filled.\n");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
+
     if constexpr(std::is_same_v<std::complex<DATA>, std::decay_t<ATAD>>) {
         this->val[cur_row*col + cur_col++] = std::real(value);
     } else {
@@ -1345,6 +1399,80 @@ matrix<DATA>& matrix<DATA>::operator<<(const ATAD& value) {
     }
     return *this;
 }
+template<typename DATA>
+std::ostream& operator<<(std::ostream& os, const matrix<DATA>& mat) noexcept {
+    int i, j;
+
+    // zero size matrix display
+    if (mat.rows() == 0 || mat.cols() == 0) {
+        os << "(empty matrix)\n";
+        return os;
+    }
+
+    int max_precision = MATRIX_PRECISION;
+    int padding = 1;
+    int maxDigits = 1;
+
+    // if it is a bool matrix use different logic
+    if constexpr(std::is_same_v<DATA,bool>) {
+        for(int i = 0; i < mat.rows(); i++) {
+            for(int j = 0; j < mat.cols(); j++)
+                os << std::setw(5) << std::boolalpha << mat(i, j) << " ";
+            os << '\n';
+        }
+    } else if constexpr(std::is_integral_v<DATA>) {
+        padding = 0;
+        for (i = 0; i < mat.rows(); ++i) {
+            for (j = 0; j < mat.cols(); ++j) {
+                std::stringstream stream;
+                stream << mat(i, j);
+                std::string str = stream.str();
+                maxDigits = std::max(maxDigits, static_cast<int>(str.length()));
+            }
+        }
+        int width = maxDigits + padding;
+        for (i = 0; i < mat.rows(); ++i) {
+            for (j = 0; j < mat.cols(); ++j) {
+                os << std::setw(width) << mat(i, j) << " ";
+            }
+            os << "\n";
+        }
+    } else {
+        // Find the maximum number of digits in the matrix
+        for (i = 0; i < mat.rows(); ++i) {
+            for (j = 0; j < mat.cols(); ++j) {
+                std::stringstream stream;
+                stream << std::fixed << std::setprecision(max_precision) << mat(i, j);
+                std::string str = stream.str();
+
+                size_t pos = str.find_last_not_of('0');
+                if (pos != std::string::npos && str[pos] == '.')
+                    pos--;
+
+                maxDigits = std::max(maxDigits, static_cast<int>(pos + 1));
+            }
+        }
+        int width = maxDigits + padding;
+        for (i = 0; i < mat.rows(); ++i) {
+            for (j = 0; j < mat.cols(); ++j) {
+                std::stringstream stream;
+                stream << std::fixed << std::setprecision(max_precision) << mat(i, j);
+                std::string str = stream.str();
+
+                size_t pos = str.find_last_not_of('0');
+                if (pos != std::string::npos && str[pos] == '.')
+                    pos--;
+
+                os << std::setw(width) << str.substr(0, pos + 1);
+            }
+            os << "\n";
+        }
+    }
+    return os;
+}
+
+
+
 
 /// ELEMENT-WISE EXPONENT OPERATION
 template<typename DATA>
@@ -2875,15 +3003,10 @@ struct BlockSize<TYPE>\
 
 CREATE_BLOCKSIZE_SPEC(char)
 CREATE_BLOCKSIZE_SPEC(signed char)
-CREATE_BLOCKSIZE_SPEC(unsigned char)
 CREATE_BLOCKSIZE_SPEC(short)
-CREATE_BLOCKSIZE_SPEC(unsigned short)
 CREATE_BLOCKSIZE_SPEC(int)
-CREATE_BLOCKSIZE_SPEC(unsigned int)
 CREATE_BLOCKSIZE_SPEC(long)
-CREATE_BLOCKSIZE_SPEC(unsigned long)
 CREATE_BLOCKSIZE_SPEC(long long)
-CREATE_BLOCKSIZE_SPEC(unsigned long long)
 CREATE_BLOCKSIZE_SPEC(float)
 CREATE_BLOCKSIZE_SPEC(double)
 CREATE_BLOCKSIZE_SPEC(long double)
@@ -3158,13 +3281,13 @@ matrix<DATA> operator&(const matrix<DATA>& A, const matrix<DATA>& B) {
     const int K = A.cols();
     const int N = B.cols();
 
-
+    
     if(A.cols() != B.rows())
         throw std::domain_error("linear::operator& - Internal dimensions do not match.");
 
     matrix<DATA> C(M,N);
 
-    if(M <= 256 && N <= 256 && K <= 256)
+    if(M <= 64 && N <= 64 && K <= 64)
         return normmatmul(A,B);
 
     if constexpr(std::is_class_v<DATA>) {

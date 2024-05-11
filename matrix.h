@@ -528,10 +528,10 @@ class matrix {
 
         /// QUERY methods
         bool isSquare() const { if(this->col == this->row) return true; else return false;}
-        bool isSymmetric() const;
+        bool isSymmetric() const noexcept;
         DATA item() const;
-        bool isComparable(const matrix<DATA>&) const;
-        bool isMatMulDefined(const matrix<DATA>&) const;
+        bool isComparable(const matrix<DATA>&) const noexcept;
+        bool isMatMulDefined(const matrix<DATA>&) const noexcept;
         bool all(bool value) const;
         bool isany(bool value) const;
         std::vector<std::vector<DATA>> toVector();
@@ -539,8 +539,6 @@ class matrix {
         /// FILE OPERATIONS I/O
         bool saveMatrix(const std::string&, const std::string& folderpath=SAVEPATH);
         bool loadMatrix(const std::string&, const std::string& folderpath=SAVEPATH);
-
-        
 };
 
 
@@ -912,6 +910,7 @@ matrix<DATA> matrix<DATA>::min(int dim) {
 //// Indices of Min element
 template<typename DATA>
 matrix<DATA> matrix<DATA>::argmin(int dim) {
+assert(dim>=-1 && dim<=1);
 int minIdx_i, minIdx_j;
     if(dim == -1) {
         /*
@@ -988,6 +987,7 @@ int minIdx_i, minIdx_j;
 //// Max
 template<typename DATA>
 matrix<DATA> matrix<DATA>::max(int dim) {
+    assert(dim>=-1 && dim<=1);
     DATA maxElem;
     if(dim == -1) {
             /* Returns a 1x1 matrix of max value */
@@ -1054,6 +1054,7 @@ matrix<DATA> matrix<DATA>::max(int dim) {
 /// Indices of max
 template<typename DATA>
 matrix<DATA> matrix<DATA>::argmax(int dim) {
+    assert(dim>=-1 && dim<=1);
     int maxIdx_i, maxIdx_j;
     if(dim == -1) {
         /*
@@ -1130,21 +1131,21 @@ matrix<DATA> matrix<DATA>::argmax(int dim) {
 
 /// COMPARE DIMENSIONS
 template<typename DATA>
-bool matrix<DATA>::isComparable(const matrix<DATA>& m) const {
+bool matrix<DATA>::isComparable(const matrix<DATA>& m) const noexcept{
     if(this->rows() == m.rows() && this->cols() == m.cols()) {
         return true;
     }
     return false;
 }
 template<typename DATA>
-bool matrix<DATA>::isMatMulDefined(const matrix<DATA>& m) const {
+bool matrix<DATA>::isMatMulDefined(const matrix<DATA>& m) const noexcept{
     if(this->cols() == m.rows())
         return true;
     return false;
 }
 
 template<typename DATA>
-bool matrix<DATA>::isSymmetric() const{
+bool matrix<DATA>::isSymmetric() const noexcept{
     if(this->row == this->col)
      {
         matrix<DATA> Transpose = ~(*this);
@@ -1166,7 +1167,7 @@ DATA matrix<DATA>::item() const{
 
 template<typename DATA>
  bool matrix<DATA>::all(bool value) const {
-    static_assert(std::is_same_v<DATA,bool>, "linaear::matrix::all is only supported for boolean matrices.");
+    static_assert(std::is_same_v<DATA,bool>, "linsear::matrix::all is only supported for boolean matrices.");
     
     for(int i=0; i<this->rows(); ++i) {
         for(int j=0; j<this->cols(); ++j) {
@@ -1207,7 +1208,7 @@ matrix<DATA> matrix<DATA>::hStack(matrix const& obj) {
         if(this->row != obj.row)
             throw std::invalid_argument("linear::matrix::hStack - The row dimensions do not match.\n");
     } catch(const std::exception& e) {
-        std::cerr<<<e.what();
+        std::cerr<<e.what();
         exit(0);
     }
     // initialize the augmented matrix
@@ -1508,7 +1509,8 @@ inline  DATA& matrix<DATA>::operator()(const int r, const int c)  {
     if(r >=0 && r < this->rows()  && c >= 0 && c < this->cols()) {
         return *(val + r*this->col + c);
     } else {
-        throw std::out_of_range("linear::matrix::operator() - matrix indices out of range.");
+        std::cerr<<"linear::matrix::operator() - matrix indices out of range.";
+        exit(0);
     }
 }
 template<typename DATA>
@@ -1516,14 +1518,19 @@ inline const DATA& matrix<DATA>::operator()(const int r, const int c) const {
     if(r >=0 && r < this->rows()  && c >= 0 && c < this->cols()) {
         return *(val + r*this->col + c);
     } else {
-        throw std::out_of_range("linear::matrix::operator() - matrix indices out of range.");
+        std::cerr<<"\nlinear::matrix::operator() - matrix indices out of range.";
+        exit(0);
     }
 }
 template<typename DATA>
 matrix<DATA> matrix<DATA>::operator()(const matrix<bool>& m) {
-    if(m.rows() != this->rows() || m.cols() != this->cols())
-        throw std::invalid_argument("the corresponding dimensions do not match.");
-
+    try {
+        if(m.rows() != this->rows() || m.cols() != this->cols())
+            throw std::invalid_argument("linear::matrix::operator()- The corresponding dimensions do not match.\n");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     int size=0;
     for(bool* itr=m.begin(); itr != m.end(); ++itr) {
         if(*itr)
@@ -1585,7 +1592,6 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
 
     if (validation) {
         matrix<DATA> m(y_0 - x_0, y_1 - x_1);
-
         for(int i=0; i<m.row; ++i) {
             for(int j=0; j<m.col; ++j) {
                 *(m.val + i*m.col + j) = *(val + (i + x_0)*(this->col) + (j + x_1));
@@ -1593,7 +1599,8 @@ matrix<DATA> matrix<DATA>::slice(int x_0, int y_0, int x_1, int y_1) {
         }
         return m;
     } else {
-        throw std::invalid_argument("slicing matrix error raised - Wrong index range received. Check your index Params.");
+        std::cerr<<"linear::matrix::slice - wrong range indices received. Check your indices.";
+        exit(0);
     }
 }
 
@@ -1613,7 +1620,8 @@ void matrix<DATA>::setSubMatrix(int x_0, int y_0, int x_1, int y_1, const matrix
             }
         }
     } else {
-        throw std::invalid_argument("linear::matrix::setSubMatrix - Wrong range indices received. Check your arguments.");
+        std::cerr<<"linear::matrix::setSubMatrix - Wrong range indices received. Check your arguments.";
+        exit(0);
     }
 }
 template<typename DATA>
@@ -1667,14 +1675,19 @@ void matrix<DATA>::insertAt(DATA value, int r, int c)  {
         if( (r>-1 && r < this->row) && (c>-1 && c<this->col)) {
             *(val + (this->col)*r + c) = value;
         } else {
-            throw std::invalid_argument("linear::matrix::insertAt() - The index values exceed the dimension size of the matrix.");
+            std::cerr<<"linear::matrix::insertAt() - The index values exceed the dimension size of the matrix.\n";
+            exit(0);
         }
 }
 template<typename DATA>
 void matrix<DATA>::updateWithArray(DATA* array, int r, int c) {
-    if (r <0 || c < 0)
-        throw std::invalid_argument("linear::matrix::updateWithArray() - Bad dimension values.");
-
+    try {
+        if (r <0 || c < 0)
+        throw std::invalid_argument("linear::matrix::updateWithArray() - Bad dimension values.\n");
+    } catch(const std::exception &e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     this->changeDims(r, c);
     std::copy(array, array + r*c, this->first);
 }
@@ -1804,6 +1817,7 @@ bool matrix<DATA>::loadMatrix(const std::string& filename, const std::string& fo
         std::cout<<"Matrix has been successfully loaded from `"<<fullpath<<"`.\n";
         return true;
     } else {
+        std::cout<<"Failed to load Matrix from `"<<fullpath<<"`.\n";
         return false;
     }
 }
@@ -1827,10 +1841,15 @@ matrix<DATA> diag(const matrix<DATA> &m1, int shift) {
     int R = m1.rows();
     int C = m1.cols();
 
-    if(R<0 || C<0)
-        throw std::domain_error("diag() - Input matrix is empty.");
-    if(!((C == 1) ^ (R == 1)))
-        throw std::invalid_argument("diagonal() - Input matrix is not a vector.");
+    try{
+        if(R<=0 || C<=0)
+            throw std::domain_error("linear::diag - Input matrix is empty.");
+        else if(!((C == 1) ^ (R == 1)))
+            throw std::invalid_argument("linear::diag - Input matrix is not a vector.");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     
     int abs_shift = ((shift<0)?-shift:shift);
     int SIZE = ((C==1)?R:C) + abs_shift;
@@ -1864,9 +1883,14 @@ matrix<DATA> eye(int n) {
 // Is it triangular?
 template<typename DATA>
 bool is_triangular(matrix<DATA>& M) {
-    if(!M.isSquare()) {
-        throw std::invalid_argument("The matrix is not square.");
+    try{
+        if(!M.isSquare())
+          throw std::invalid_argument("The matrix is not square.");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
+
     int n = M.rows();
     int m = M.cols();
 
@@ -2129,9 +2153,10 @@ matrix<DATA> &matrix<DATA>::operator/=(const ATAD value) {
 
 template<typename DATA>
 matrix<DATA> &matrix<DATA>::operator-=(const matrix<DATA>& m1) {
-    if(!this->isComparable(m1))
-        throw std::invalid_argument("Dimensions do not match.");
-    else {
+    if(!this->isComparable(m1)) {
+        std::cerr<<"linear::op-= - Dimensions do not match.";
+        exit(0);
+    } else {
         #pragma omp parallel for if(cols() > 64 || rows() > 64)
         for(int i=0; i<this->rows()*this->cols(); ++i)
             *(val + i) -= m1(i/m1.cols(), i%m1.cols());
@@ -2177,9 +2202,14 @@ template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     // element-wise multiplication 
     // NOT MATRIX MULTIPLICATION
-    if(!(m1.isComparable(m2))) {
-        throw std::invalid_argument("Corresponding dimensions do not match for element-wise multiplication.");
+    try {
+        if(!(m1.isComparable(m2)))
+            throw std::invalid_argument("linear::op*-Corresponding dimensions do not match for element-wise multiplication.");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
+
     matrix<DATA> product(m1.rows(), m1.cols(), (DATA)1);
     #pragma omp parallel for if(m1.cols() > 64 || m1.rows() > 64)
     for(int i=0; i<m1.rows()*m1.cols(); ++i){
@@ -2190,8 +2220,13 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 
 template<typename DATA>
 matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    if(!m1.isComparable(m2))
-        throw std::domain_error("linear::matrix::op== - corresponding dimensions must match");
+    try{
+        if(!m1.isComparable(m2))
+         throw std::domain_error("linear::matrix::op== - corresponding dimensions must match");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     matrix<bool> res(m1.rows(), m1.cols(), true);
 
     #pragma omp parallel for collapse(2) if(m1.rows() >= 64 || m1.cols() >= 64)
@@ -2228,8 +2263,14 @@ matrix<bool> operator==(const ATAD value, const matrix<DATA>& m1) {
 
 template<typename DATA>
 matrix<bool> operator<(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    if(!m1.isComparable(m2))
-        throw std::domain_error("matrix - corresponding dimensions must match");
+    try{
+         if(!m1.isComparable(m2))
+            throw std::domain_error("linear::op< - corresponding dimensions must match");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
+
     matrix<bool> res(m1.rows(), m1.cols());
 
     #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
@@ -2264,8 +2305,14 @@ matrix<bool> operator<(const ATAD value, const matrix<DATA>& m1) {
 
 template<typename DATA>
 matrix<bool> operator>(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    if(!m1.isComparable(m2))
-        throw std::domain_error("matrix - corresponding dimensions must match");
+    try {
+        if(!m1.isComparable(m2))
+            throw std::domain_error("matrix - corresponding dimensions must match");   
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
+
     matrix<bool> res(m1.rows(), m1.cols());
 
     #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
@@ -2313,8 +2360,13 @@ matrix<bool> operator>(const ATAD value, const matrix<DATA>& m1) {
 
 template<typename DATA>
 matrix<bool> operator>=(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    if(!m1.isComparable(m2))
-        throw std::domain_error("matrix - corresponding dimensions must match");
+    try{
+        if(!m1.isComparable(m2))
+         throw std::domain_error("matrix - corresponding dimensions must match");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     matrix<bool> res(m1.rows(), m1.cols());
 
     #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
@@ -2362,8 +2414,13 @@ matrix<bool> operator>=(const ATAD value, const matrix<DATA>& m1) {
 
 template<typename DATA>
 matrix<bool> operator<=(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-    if(!m1.isComparable(m2))
-        throw std::domain_error("matrix - corresponding dimensions must match");
+    try{
+        if(!m1.isComparable(m2))
+            throw std::domain_error("matrix - corresponding dimensions must match");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     matrix<bool> res(m1.rows(), m1.cols());
 
     #pragma omp parallel for if(m1.rows() >= 64 || m1.cols() >= 64)
@@ -2411,8 +2468,8 @@ matrix<bool> operator<=(const ATAD value, const matrix<DATA>& m1) {
 
 template<typename DATA>
 matrix<DATA>& matrix<DATA>::operator+=(const matrix<DATA>& m1) {
-    if (!this->isComparable(m1))
-        throw std::invalid_argument("Dimensions do not match.");
+    if (!this->isComparable(m1)) {
+        std::cerr<<"Dimensions do not match."; exit(0); }
     else {
         int Size = this->rows() * this->cols();
 
@@ -2435,8 +2492,13 @@ matrix<DATA>& matrix<DATA>::operator+=(const DATA value) {
 
 template<typename DATA>
 matrix<DATA> operator+(const matrix<DATA>& m1, const matrix<DATA>& m2) {
-   if(!(m1.isComparable(m2))) {
+   try {
+    if(!(m1.isComparable(m2))) {
         throw std::invalid_argument("corresponding dimensions do not match for addition.");
+    }
+   } catch (const std::exception& e) {
+    std::cerr<<e.what();
+    exit(0);
    }
    matrix<DATA> m = m1;
    m += m2;
@@ -2463,8 +2525,13 @@ matrix<DATA> operator+(const double value, const matrix<DATA>& m2) {
 
 template<typename DATA>
 matrix<DATA> operator-(const matrix<DATA>& m1, const matrix<DATA>& m2){
-    if(!(m1.isComparable(m2))) {
-        throw std::invalid_argument("corresponding dimensions do not match for subtraction.");
+    try {
+        if(!(m1.isComparable(m2))) {
+         throw std::invalid_argument("corresponding dimensions do not match for subtraction.");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
     matrix<DATA> m = m1;
     m -= m2;
@@ -2491,8 +2558,13 @@ matrix<DATA> operator-(const double value, const matrix<DATA>& m2) {
 // linear::normmatmul - replacement for lower matrices
 template<typename DATA>
 matrix<DATA> normmatmul(const matrix<DATA> &m1,const matrix<DATA> &m2) {
-    if(m1.cols() != m2.rows()) {
+    try {
+        if(m1.cols() != m2.rows()) {
         throw std::invalid_argument("linear:matmul - Internal dimensions do not match.");   
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
     matrix<DATA> m(m1.rows(), m2.cols(), DATA(0.));
 
@@ -2511,8 +2583,13 @@ matrix<DATA> matmul(const matrix<DATA>& m1, const matrix<DATA>& m2) {
 
 template<typename DATA>
 matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const int block_size=32) {
-    if (m1.cols() != m2.rows()) {
-        throw std::invalid_argument("linear::matmul_block - Internal dimensions do not match.");
+    try {
+        if (m1.cols() != m2.rows()) {
+            throw std::invalid_argument("linear::matmul_block - Internal dimensions do not match.");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
 
     const int m = m1.rows();
@@ -2545,9 +2622,13 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
 #if GCCAVAIL
 template<typename DATA>
 matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
-    if(A.cols() != B.rows())
-        throw std::invalid_argument("linear::matmul_blas - Internal dimensions do not match.");
-    
+    try {
+        if(A.cols() != B.rows())
+         throw std::invalid_argument("linear::matmul_blas - Internal dimensions do not match.");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     int m = A.rows();
     int n = B.cols();
     int k = A.cols();
@@ -2626,8 +2707,13 @@ matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
 template<typename DATA>
 matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=32) {
     int n = A.rows();
-    if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
-        throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
+    try {
+        if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
+            throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
+        } 
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
     
     if (n < base_case_cutoff) {
@@ -2686,8 +2772,13 @@ matrix<DATA> strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_ca
 template<typename DATA>
 matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int base_case_cutoff=32) {
     int n = A.rows();
-    if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
-        throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
+    try {
+        if (A.cols() != B.rows() || A.cols() != A.rows() || B.cols() != B.rows() || n % 2 != 0) {
+            throw std::invalid_argument("Invalid matrix dimensions for Strassen's algorithm.");
+        }
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
     }
     
     if (n < base_case_cutoff) {
@@ -2751,9 +2842,6 @@ matrix<DATA> para_strassen_multiply(matrix<DATA> A, matrix<DATA> B, const int ba
 
 /// TRIANGULAR MATRIX GENERATORS ///
 matrix<double> upper_triangle_matrix(int size, double mean, double std) {
-    if(size < 1)
-        throw std::invalid_argument("size is less than 1.");
-    
     matrix<double> result(size,size,0.);
 
     std::random_device rd;
@@ -2776,9 +2864,6 @@ matrix<double> triu(int size, double mean, double std) {
 }
 
 matrix<double> lower_triangle_matrix(int size, double mean, double std) {
-    if(size<1)
-        throw std::invalid_argument("size is less than 1.");
-
     matrix<double> result(size,size,0.);
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -3280,11 +3365,14 @@ matrix<DATA> operator&(const matrix<DATA>& A, const matrix<DATA>& B) {
     const int M = A.rows();
     const int K = A.cols();
     const int N = B.cols();
-
     
-    if(A.cols() != B.rows())
-        throw std::domain_error("linear::operator& - Internal dimensions do not match.");
-
+    try {
+        if(A.cols() != B.rows())
+            throw std::domain_error("linear::operator& - Internal dimensions do not match.");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
     matrix<DATA> C(M,N);
 
     if(M <= 64 && N <= 64 && K <= 64)

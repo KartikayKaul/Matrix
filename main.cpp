@@ -70,6 +70,5 @@ int main(int arg, char *argv[]) {
     (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
     cout<<"\n";
 
-    
     return 0;
 }

@@ -1,5 +1,6 @@
 #include<iostream>
 #include "matrix.h"
+#include "matview.h"
 #include<chrono>
 // #include<Eigen/Dense>
 
@@ -10,7 +11,7 @@ using namespace std::chrono;
 int main(int arg, char *argv[]) {
     int N = std::atoi(argv[1]);
     
-    using TESTTYPE = float;
+    using TESTTYPE = double;
 
     cout<<"\nGenerating two "<<N<<'x'<<N<<" random matrices with TESTTYPE values... ";
     auto alloc_time_start = high_resolution_clock::now();
@@ -25,7 +26,7 @@ int main(int arg, char *argv[]) {
     
     double sum1=0,sum2=0, sum3=0, sum4=0;
     int c1=0, c2=0, c3=0, c4=0;
-    const int ITERS=1000;
+    const int ITERS=100;
     cout<<"\nProgress: ";
     for(int i=0; i<ITERS; ++i) {
         //benchmarking matrix mul
@@ -55,7 +56,7 @@ int main(int arg, char *argv[]) {
         sum1+= duration.count(); sum2+= duration1.count(); sum3+= duration7.count(); sum4+= duration2.count();
         ++c1; ++c2; ++c3; ++c4;
 
-        if(i%100==0) cout<<"=";
+        if(i%10==0) cout<<"=";
     }
 
     cout<<"\n\n====Benchmark Results====\n";
@@ -67,8 +68,12 @@ int main(int arg, char *argv[]) {
     cout<<endl;
 
     cout<<"\n";
-    (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
+    // (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
     cout<<"\n";
+    linear::matrix<double> ouch = linear::randomUniformInt(3,3,1,5);
+
+    cout<<ouch;
+    cout<<(ouch^2.5);
 
     return 0;
 }

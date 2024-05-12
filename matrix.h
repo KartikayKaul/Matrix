@@ -496,8 +496,7 @@ class matrix {
 
         // Element-wise exponent operation
         matrix<DATA> operator^(int);
-        template<typename ATAD, typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
-        matrix<DATA> operator^(ATAD);
+        matrix<DATA> operator^(double);
         
         /// Swap Operations
         void swapRows(int,int);
@@ -1490,8 +1489,8 @@ matrix<DATA> matrix<DATA>::operator^(int power) {
     return m;
 }
 template<typename DATA>
-template<typename ATAD, typename std::enable_if_t<std::is_arithmetic_v<ATAD>>>
-matrix<DATA> matrix<DATA>::operator^(ATAD power) {
+matrix<DATA> matrix<DATA>::operator^(double power) {
+    static_assert(std::is_floating_point_v<DATA>);
     matrix<DATA> m(this->row, this->col);
 
     #pragma omp parallel for collapse(2) if(this->rows()>=100 || this->cols() >=100)

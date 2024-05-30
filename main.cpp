@@ -68,12 +68,7 @@ int main(int arg, char *argv[]) {
     cout<<endl;
 
     cout<<"\n";
-    // (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
+    (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
     cout<<"\n";
-    linear::matrix<double> ouch = linear::randomUniformInt(3,3,1,5);
-
-    cout<<ouch;
-    cout<<(ouch^2.5);
-
     return 0;
 }

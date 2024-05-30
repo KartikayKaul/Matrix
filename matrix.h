@@ -17,24 +17,6 @@
 #include<x86intrin.h>
 #include<cassert>
 
-// Check if g++ or clang used except INTEL
-#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
-#define GCCAVAIL 1
-#else
-#define GCCAVAIL 0
-#endif
-
-// safeguard to check if cblas can be added
-#ifdef __cplusplus
-extern "C" {
-#endif
-#if GCCAVAIL
-#include <cblas.h>
-#endif
-#ifdef __cplusplus
-}
-#endif
-
 //testing
 #include<algorithm>
 
@@ -44,7 +26,7 @@ namespace linear{
 
 // precision macros
 #define MATRIX_PRECISION 4 // precision of matrix values in console display
-#define MATRIX_PRECISION_TOL 6 
+#define MATRIX_PRECISION_TOL 10
 #define PRECISION_TOL(type) std::numeric_limits<type>::epsilon() * std::pow(10, MATRIX_PRECISION_TOL)
 
 //path macros for IO
@@ -2618,29 +2600,6 @@ matrix<DATA> matmul_block(const matrix<DATA>& m1, const matrix<DATA>& m2, const 
     return result;
 }
 
-#if GCCAVAIL
-template<typename DATA>
-matrix<DATA> matmul_blas(const matrix<DATA>& A, const matrix<DATA>& B) {
-    try {
-        if(A.cols() != B.rows())
-         throw std::invalid_argument("linear::matmul_blas - Internal dimensions do not match.");
-    } catch(const std::exception& e) {
-        std::cerr<<e.what();
-        exit(0);
-    }
-    int m = A.rows();
-    int n = B.cols();
-    int k = A.cols();
-
-    matrix<DATA> C(m, n);
-
-    // Call BLAS function for matrix-matrix multiplication
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, A.begin(), k, B.begin(), n, 0.0, C.begin(), n);
-
-    return C;
-}
-#endif
-
 template<typename DATA, typename std::enable_if_t<std::disjunction_v<std::is_same<DATA,float>,std::is_same<DATA,double>, std::is_same<DATA,int>>, int> = 0>
 matrix<DATA> matmul_simd(const matrix<DATA>& A, const matrix<DATA>& B) {
     /*
@@ -3392,5 +3351,54 @@ https://stackoverflow.com/a/35637007
 Inspired by the BLIS framework:-
 https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf
 */
+
+/* LU Decomposition */
+template<typename DATA>
+matrix<DATA> ludecomp(matrix<DATA> A, matrix<DATA> b) {
+    try {
+        if(!A.isSquare())
+            throw std::invalid_argument("linear::lu - A has to be a square matrix.\n");
+        if(b.cols() != 1 && b.rows() != A.rows())
+            throw std::invalid_argument("linear::lu - b has invalid dimensions.\n");
+    } catch(const std::exception& e) {
+        std::cerr<<e.what();
+        exit(0);
+    }
+    int n = A.rows();
+    matrix<DATA> U = A;
+    matrix<DATA> y(n,1);
+
+    // forward substitution
+    for(int p=0; p<n; ++p) {
+        double s = 1.0/U(p,p);
+
+        y(p,0) = b(p,0) * s;
+        for(int j=p; j<n; ++j) {
+            U(p,j) *= s;
+        }
+
+        //Eliminate from future rows
+        for(int r=p+1; r<n; ++r) {
+            double urp = U(r,p);
+            for(int c=p; c<n; ++c) {
+                U(r,c) -= urp*U(p,c);
+            }
+            b(r,0) -= urp*y(p,0);
+        }
+    }
+    matrix<DATA> x(n,1);
+    // back substitution
+    for(int p=n-1; p>=0; --p) {
+        x(p,0) = y(p,0)/U(p,p);
+        for(int r=p-1; r>=0; --r) {
+            y(r,0) -= U(r,p)*x(p,0); 
+        }
+    }
+
+    return x;
+}
+
+/* LU Decomposition ends here*/
+
 }//linear namespace ends
 #endif // MATRIX_H

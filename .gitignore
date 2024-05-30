@@ -7,5 +7,6 @@ strassen.cpp
 strassen
 tests
 saves/*
-examples/exam
+Examples/exam
 main.exe
+Examples/exam.exe

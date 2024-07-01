@@ -1,6 +1,5 @@
 #include<iostream>
 #include "matrix.h"
-#include "matview.h"
 #include<chrono>
 // #include<Eigen/Dense>
 
@@ -70,5 +69,16 @@ int main(int arg, char *argv[]) {
     cout<<"\n";
     (D==C).all(true)?cout<<"C==D is true.":cout<<"C==D is false.";
     cout<<"\n";
+    
+    
+    matrix<double> M1 = linear::randomUniform(3);
+    //cout<<"Matrix M1:-\n"<<M1;
+    matrix<double> L, U;
+    ludecomp(M1, L, U);
+    cout<<is_triangular(L)<<endl;
+    cout<<is_triangular(U)<<endl;
+    cout<<"M1:-\n"<<M1;
+    cout<<"U:-\n"<<U<<"\nL:-\n"<<L;
+
     return 0;
 }

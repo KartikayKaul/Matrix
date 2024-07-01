@@ -16,24 +16,25 @@
 #include<type_traits>
 #include<x86intrin.h>
 #include<cassert>
+#include<string>
 
 //testing
 #include<algorithm>
 
 namespace linear{
-// macro for deallocation
+// deAlloc macro for deallocating an array pointer
 #define deAlloc(x) delete[] x; x = NULL;
 
-// precision macros
+// Macros for precision handling
 #define MATRIX_PRECISION 4 // precision of matrix values in console display
 #define MATRIX_PRECISION_TOL 10
 #define PRECISION_TOL(type) std::numeric_limits<type>::epsilon() * std::pow(10, MATRIX_PRECISION_TOL)
 
-//path macros for IO
+// Macros for IO
 #define SAVEPATH "saves" //default path
 #define F_EXT ".linmat" //default linear::matrix format
 
-//stringify variable name MACRO
+// Stringify Macro
 #define CHANGE_ID_TO_STRING(x) (#x)
 
 // linear::range is specially made for slicing operation to generate submatrices
@@ -47,7 +48,7 @@ struct range {
   const int size() {return end - start;}
 };
 
-//Defining type trait to check if a type is std::complex
+// Defining type trait to check if a type is std::complex
 template<typename DATA>
 struct is_complex : std::false_type {};
 template<typename DATA>
@@ -82,6 +83,7 @@ DEFINE_TYPENAME_FOR_TYPE(std::complex<double>)
 DEFINE_TYPENAME_FOR_TYPE(std::complex<int>)
 DEFINE_TYPENAME_FOR_TYPE(std::complex<float>)
 DEFINE_TYPENAME_FOR_TYPE(std::complex<long double>)
+DEFINE_TYPENAME_FOR_TYPE(wchar_t)
 
 template<typename DATA=double>
 class matrix {
@@ -114,7 +116,7 @@ class matrix {
     void getMemoryforVal(int r, int c) {
         try {
             if(r<1 || c<1)
-            throw std::invalid_argument("Invalid dimension values.");
+            throw std::invalid_argument("linear::getMemoryforVal() - Invalid dimension values.");
             val = new DATA[r*c];
         } catch (const std::exception& e) {
             std::cerr << "linear::getMemoryforVal() - Heap memory allocation failed. " << e.what() << "\n";
@@ -313,6 +315,15 @@ class matrix {
         matrix(std::vector<DATA> data) {
             getMemoryforVal(1, data.size());
             std::copy(data.begin(), data.end(), this->first);
+        }
+
+        // initialize char matrix for cipher stuff
+        template <typename U = DATA, typename std::enable_if<std::is_same<U, char>::value, int>::type = 0>
+        matrix(std::string cipher) {
+            int size = cipher.size();
+            int dim = std::ceil(std::sqrt(size));
+            getMemoryforVal(dim,dim);
+            std::copy(cipher.begin(), cipher.end(), this->first);
         }
 
         //copy constructor
@@ -545,6 +556,12 @@ template<typename DATA, typename ATAD>
 matrix<DATA> operator*(const ATAD, const matrix<DATA>&);
 template<typename DATA>
 matrix<DATA> operator*(const matrix<DATA>&, const matrix<DATA>&);
+
+template<typename DATA, typename ATAD>
+matrix<DATA> operator%(const matrix<DATA>&, const ATAD);
+template<typename DATA>
+matrix<DATA> operator%(const matrix<DATA>&, const matrix<DATA>&);
+
 
 template<typename DATA>
 matrix<DATA> operator&(const matrix<DATA>&, const matrix<DATA>&);
@@ -2199,6 +2216,19 @@ matrix<DATA> operator*(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     return product;
 }
 
+
+// template<typename DATA, typename ATAD>
+// matrix<DATA> operator%(const matrix<DATA>&, const ATAD) {
+//     try {
+//         if()
+//     } catch(const std::exception& e) {
+//         std::cerr<<e.what();
+//         exit(0);
+//     }
+// }
+// template<typename DATA>
+// matrix<DATA> operator%(const matrix<DATA>&, const matrix<DATA>&);
+
 template<typename DATA>
 matrix<bool> operator==(const matrix<DATA>& m1, const matrix<DATA>& m2) {
     try{
@@ -3353,50 +3383,119 @@ https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf
 */
 
 /* LU Decomposition */
-template<typename DATA>
-matrix<DATA> ludecomp(matrix<DATA> A, matrix<DATA> b) {
-    try {
-        if(!A.isSquare())
-            throw std::invalid_argument("linear::lu - A has to be a square matrix.\n");
-        if(b.cols() != 1 && b.rows() != A.rows())
-            throw std::invalid_argument("linear::lu - b has invalid dimensions.\n");
-    } catch(const std::exception& e) {
-        std::cerr<<e.what();
-        exit(0);
-    }
-    int n = A.rows();
-    matrix<DATA> U = A;
-    matrix<DATA> y(n,1);
 
-    // forward substitution
-    for(int p=0; p<n; ++p) {
-        double s = 1.0/U(p,p);
+template <typename T>
+void ludecomp_block(T *A, int lda, T *L, T *U, int n, int bsize)
+{
+    for (int k = 0; k < n; k += bsize) {
+        int end_k = std::min(k + bsize, n);
 
-        y(p,0) = b(p,0) * s;
-        for(int j=p; j<n; ++j) {
-            U(p,j) *= s;
-        }
-
-        //Eliminate from future rows
-        for(int r=p+1; r<n; ++r) {
-            double urp = U(r,p);
-            for(int c=p; c<n; ++c) {
-                U(r,c) -= urp*U(p,c);
+        // Factorize the diagonal and subdiagonal blocks
+        for (int i = k; i < end_k; ++i) {
+            for (int j = i; j < end_k; ++j) {
+                U[i*lda + j] = A[i*lda + j];
+                for (int p = k; p < i; ++p) {
+                    U[i*lda + j] -= L[i*lda + p] * U[p*lda + j];
+                }
             }
-            b(r,0) -= urp*y(p,0);
+            for (int j = i + 1; j < end_k; ++j) {
+                L[j*lda + i] = A[j*lda + i] / U[i*lda + i];
+                for (int p = k; p < i; ++p) {
+                    L[j*lda + i] -= L[j*lda + p] * U[p*lda + i] / U[i*lda + i];
+                }
+            }
         }
-    }
-    matrix<DATA> x(n,1);
-    // back substitution
-    for(int p=n-1; p>=0; --p) {
-        x(p,0) = y(p,0)/U(p,p);
-        for(int r=p-1; r>=0; --r) {
-            y(r,0) -= U(r,p)*x(p,0); 
-        }
-    }
 
-    return x;
+        // Update the trailing submatrix
+        for (int i = end_k; i < n; ++i) {
+            for (int j = end_k; j < n; ++j) {
+                for (int p = k; p < end_k; ++p) {
+                    A[i*lda + j] -= L[i*lda + p] * U[p*lda + j];
+                }
+            }
+        }
+    }
 }
+
+template <typename T>
+void ludecomp(T *A, T *L, T *U, int n)
+{
+    const int MC = BlockSize<T>::MC;
+    const int NC = BlockSize<T>::NC;
+    const int KC = BlockSize<T>::KC;
+
+    for (int k = 0; k < n; k += KC) {
+        int end_k = std::min(k + KC, n);
+
+        // Panel factorization
+        ludecomp_block(A + k * n + k, n, L + k * n + k, U + k * n + k, end_k - k, MC);
+
+        // Update trailing submatrix
+        for (int i = end_k; i < n; i += MC) {
+            int end_i = std::min(i + MC, n);
+            for (int j = end_k; j < n; j += NC) {
+                int end_j = std::min(j + NC, n);
+                ludecomp_block(A + i * n + j, n, L + i * n + k, U + k * n + j, end_i - i, end_j - j);
+            }
+        }
+    }
+}
+
+template <typename T>
+void ludecomp(const matrix<T> &A, matrix<T> &L, matrix<T> &U)
+{
+    int n = A.rows();
+    L = eye<T>(n);
+    U = A;
+
+    ludecomp(A.begin(), L.begin(), U.begin(), n);
+}
+
+
+// template<typename DATA>
+// matrix<DATA> ludecomp(matrix<DATA> A, matrix<DATA> b) {
+//     try {
+//         if(!A.isSquare())
+//             throw std::invalid_argument("linear::lu - A has to be a square matrix.\n");
+//         if(b.cols() != 1 && b.rows() != A.rows())
+//             throw std::invalid_argument("linear::lu - b has invalid dimensions.\n");
+//     } catch(const std::exception& e) {
+//         std::cerr<<e.what();
+//         exit(0);
+//     }
+//     int n = A.rows();
+//     matrix<DATA> U = A;
+//     matrix<DATA> y(n,1);
+
+//     // forward substitution
+//     for(int p=0; p<n; ++p) {
+//         double s = 1.0/U(p,p);
+
+//         y(p,0) = b(p,0) * s;
+//         for(int j=p; j<n; ++j) {
+//             U(p,j) *= s;
+//         }
+
+//         //Eliminate from future rows
+//         for(int r=p+1; r<n; ++r) {
+//             double urp = U(r,p);
+//             for(int c=p; c<n; ++c) {
+//                 U(r,c) -= urp*U(p,c);
+//             }
+//             b(r,0) -= urp*y(p,0);
+//         }
+//     }
+//     matrix<DATA> x(n,1);
+//     // back substitution
+//     for(int p=n-1; p>=0; --p) {
+//         x(p,0) = y(p,0)/U(p,p);
+//         for(int r=p-1; r>=0; --r) {
+//             y(r,0) -= U(r,p)*x(p,0); 
+//         }
+//     }
+
+//     return x;
+// }
 
 /* LU Decomposition ends here*/
 

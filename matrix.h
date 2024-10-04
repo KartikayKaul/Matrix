@@ -3378,7 +3378,7 @@ matrix<DATA> operator&(const matrix<DATA>& A, const matrix<DATA>& B) {
 Code sourced from and modified:-
 https://stackoverflow.com/a/35637007
 
-Inspired by the BLIS framework:-
+Uses the BLIS framework:-
 https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf
 */
 

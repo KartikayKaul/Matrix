@@ -21,4 +21,4 @@ jobs:
       run: g++ -std=c++17 -o examples Examples/examples.cpp
 
     - name: Run examples
-      run: ./examples
+      run: ./examples 1024

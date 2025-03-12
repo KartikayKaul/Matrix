@@ -18,7 +18,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y g++
 
     - name: Build examples.cpp with FMA and OpenMP
-      run: g++ -std=c++17 -ffma -fopenmp -o examples Examples/examples.cpp
+      run: g++ -std=c++17 -mfma -fopenmp -o examples Examples/examples.cpp
 
     - name: Run examples
       run: ./examples 1024

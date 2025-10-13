@@ -11,24 +11,38 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      #  Checkout the repository
+      # 1️⃣ Checkout the repository
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      #  Setup Intel oneAPI (Intel C++ compiler)
-      - name: Setup Intel oneAPI
-        uses: intel/oneapi-setup-action@v1
-        with:
-          components: 'compiler'
+      # 2️⃣ Install Intel oneAPI Compiler
+      - name: Install Intel oneAPI Compiler
+        shell: pwsh
+        run: |
+          Write-Host "Downloading Intel oneAPI offline installer..."
+          Invoke-WebRequest -Uri "https://registrationcenter-download.intel.com/akdlm/irc_nas/19007/l_oneapi_p_2023.2.0.406_offline.exe" -OutFile "oneapi_installer.exe"
+          Write-Host "Running installer..."
+          Start-Process -FilePath .\oneapi_installer.exe -ArgumentList '/s' -Wait
+          Write-Host "Intel oneAPI installation complete."
 
-      #  Build with icx
+      # 3️⃣ Setup Intel oneAPI environment
+      - name: Setup Intel oneAPI Environment
+        shell: pwsh
+        run: |
+          $env:INTEL_ONEAPI_INSTALL_DIR = "C:\Program Files (x86)\Intel\oneAPI"
+          $env:PATH = "$env:INTEL_ONEAPI_INSTALL_DIR\compiler\latest\windows\bin\intel64;$env:PATH"
+          $env:INCLUDE = "$env:INTEL_ONEAPI_INSTALL_DIR\compiler\latest\windows\include;$env:INCLUDE"
+          $env:LIB = "$env:INTEL_ONEAPI_INSTALL_DIR\compiler\latest\windows\lib\intel64;$env:LIB"
+          Write-Host "Environment setup complete."
+
+      # 4️⃣ Build main.cpp with icx
       - name: Build main.cpp with icx
         shell: pwsh
         run: |
-          icx /EHsc /O3 /std:c++17 /Qiopenmp /arch:AVX main.cpp -o main_icx.exe
+          icx /EHsc /O3 /std:c++17 /Qiopenmp /arch:AVX2 main.cpp -o main_icx.exe
 
-      #  Run the executable
+      # 5️⃣ Run the executable
       - name: Run main_icx.exe
         shell: pwsh
         run: |
-          ./main_icx.exe 1024
+          .\main_icx.exe 1024

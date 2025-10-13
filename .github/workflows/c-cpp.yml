@@ -20,5 +20,10 @@ jobs:
     - name: Build examples.cpp with FMA and OpenMP
       run: g++ -std=c++17 -mfma -fopenmp -o examples Examples/examples.cpp
 
-    - name: Run examples
+    - name: Build examples.cpp with FMA, OpenMP as well as O3 optimization
+      run: g++ -std=c++17 -mfma -fopenmp -O3 -o examples2 Examples/examples.cpp
+    - name: Run examples1
       run: ./examples 1024
+    - name: Run examples2
+      run: ./examples2 128
+      

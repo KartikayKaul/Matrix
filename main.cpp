@@ -8,6 +8,7 @@ using namespace linear;
 using namespace std::chrono;
 
 int main(int arg, char *argv[]) {
+    std::cerr << "Program started\n";
     int N = std::atoi(argv[1]);
     
     using TESTTYPE = double;
@@ -55,7 +56,16 @@ int main(int arg, char *argv[]) {
         sum1+= duration.count(); sum2+= duration1.count(); sum3+= duration7.count(); sum4+= duration2.count();
         ++c1; ++c2; ++c3; ++c4;
 
-        if(i%10==0) cout<<"=";
+        if (i % 90 == 0) std::cout << "\r[==========]";
+        else if (i % 80 == 0) std::cout << "\r[=========-]";
+        else if (i % 70 == 0) std::cout << "\r[========--]";
+        else if (i % 60 == 0) std::cout << "\r[=======---]";
+        else if (i % 50 == 0) std::cout << "\r[======----]";
+        else if (i % 40 == 0) std::cout << "\r[=====-----]";
+        else if (i % 30 == 0) std::cout << "\r[====------]";
+        else if (i % 20 == 0) std::cout << "\r[===-------]";
+        else if (i % 10 == 0) std::cout << "\r[==--------]";
+        else if (i % 1 == 0)  std::cout << "\r[=---------]";
     }
 
     cout<<"\n\n====Benchmark Results====\n";

@@ -109,6 +109,7 @@ class matrix {
         if (this->rows() > 0 && this->cols() > 0) {
             delete[] this->val;
             this->val = NULL;
+            cur_row = cur_col = 0;
         }
     }
 
@@ -155,6 +156,7 @@ class matrix {
     /// Full Pivoting private method
     void pickPivotFullPivoting(int, int&, int&);
     
+
     // declaring class of different types as friend
     template<typename ATAD>
     friend class matrix;
@@ -838,7 +840,7 @@ matrix<DATA> matrix<DATA>::solve(const matrix<DATA>& b) {
     matrix<DATA> augMat = this->hStack(b); // [A | b]
     gaussianElimination(augMat, augMat.rows(), augMat.cols());
 
-    // get the solution from the rightmost colimns of augMat
+    // get the solution from the rightmost columns of augMat
     matrix<DATA> sol = augMat.slice(0, n, n, n+1);
     return sol;
 }
@@ -1469,7 +1471,6 @@ std::ostream& operator<<(std::ostream& os, const matrix<DATA>& mat) noexcept {
     }
     return os;
 }
-
 
 
 

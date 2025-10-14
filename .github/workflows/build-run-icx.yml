@@ -1,8 +1,9 @@
-name: Build and Run with Intel oneAPI
+name: Build and Run with Intel ICX
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,41 +11,43 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1️⃣ Checkout the repository
-      - name: Checkout repository
+      # Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2️⃣ Download Intel oneAPI Web Installer (from your release)
-      - name: Download Intel oneAPI Web Installer
+      # Cache the Intel installer
+      - name: Cache Intel OneAPI installer
+        id: cache-oneapi
+        uses: actions/cache@v4
+        with:
+          path: intel-oneapi-base-toolkit-2025.2.1.46.exe
+          key: oneapi-installer-v1
+
+      # Download the installer only if not cached
+      - name: Download Intel OneAPI web installer
+        if: steps.cache-oneapi.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          Write-Host "Downloading Intel oneAPI installer from GitHub release..."
-          Invoke-WebRequest -Uri "https://github.com/KartikayKaul/Matrix/releases/download/v1.0/intel-oneapi-base-toolkit-2025.2.1.46.exe" -OutFile "intel_oneapi_installer.exe"
+          Write-Host "Downloading Intel oneAPI web installer..."
+          Invoke-WebRequest -Uri "https://github.com/KartikayKaul/Matrix/releases/download/v1.0/intel-oneapi-base-toolkit-2025.2.1.46.exe" -OutFile "intel-oneapi-base-toolkit-2025.2.1.46.exe"
+          Write-Host "Download complete."
 
-      # 3️⃣ Install oneAPI Base Toolkit silently
+      # Install Intel oneAPI (silent mode)
       - name: Install Intel oneAPI Base Toolkit
         shell: pwsh
         run: |
-          Write-Host "Installing Intel oneAPI Base Toolkit (silent mode)..."
-          Start-Process -FilePath ".\intel_oneapi_installer.exe" -ArgumentList "-a", "--silent", "--eula", "accept", "-p=NEED_VS2022_INTEGRATION=0" -Wait
+          Write-Host "Installing Intel oneAPI Base Toolkit silently..."
+          Start-Process -FilePath ".\intel-oneapi-base-toolkit-2025.2.1.46.exe" -ArgumentList "-a", "--silent", "--eula", "accept" -Wait
           Write-Host "Intel oneAPI installation complete."
 
-      # 4️⃣ Load Intel compiler environment
-      - name: Set up Intel compiler environment
-        shell: cmd
-        run: |
-          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
-          icx /QV
-
-      # 5️⃣ Build your C++ program
+      # Build with icx (no OpenMP yet)
       - name: Build main.cpp with Intel ICX
-        shell: cmd
+        shell: pwsh
         run: |
-          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
-          icx /EHsc /O3 /std:c++17 /arch:AVX main.cpp -o main_icx.exe
+          & "C:\\Program Files (x86)\\Intel\\oneAPI\\compiler\\latest\\windows\\bin\\icx.exe" /EHsc /O3 /std:c++17 /arch:AVX main.cpp -o main_icx.exe
 
-      # 6️⃣ Run the built executable
-      - name: Run main_icx.exe
+      # Run the executable
+      - name: Run Intel-compiled binary
         shell: pwsh
         run: |
           Write-Host "Running Intel-compiled binary..."

@@ -26,4 +26,14 @@ jobs:
       run: ./examples 1024
     - name: Run examples2
       run: ./examples2 128
+    
+    - name: Build main.cpp with FMA, OpenMP as well as O3 optimization
+      run: g++ -std=c++17 -mfma -fopenmp -O3 -o main main.cpp
+    - name: Run main executable with size 512
+      run: ./main 512
+    - name: Run main executable with size 1024
+      run: ./main 1024
+    - name: Run main executable with size 2048
+      run: ./main 2048
+    
       

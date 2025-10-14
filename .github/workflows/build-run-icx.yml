@@ -1,9 +1,8 @@
-name: Build and Run with Intel ICX
+name: Build and Run with Intel oneAPI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -12,37 +11,41 @@ jobs:
 
     steps:
       # 1️⃣ Checkout the repository
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # 2️⃣ Install Intel oneAPI Compiler
-      - name: Install Intel oneAPI Compiler
+      # 2️⃣ Download Intel oneAPI Web Installer (from your release)
+      - name: Download Intel oneAPI Web Installer
         shell: pwsh
         run: |
-          Write-Host "Downloading Intel oneAPI offline installer..."
-          Invoke-WebRequest -Uri "https://registrationcenter-download.intel.com/akdlm/irc_nas/19007/l_oneapi_p_2023.2.0.406_offline.exe" -OutFile "oneapi_installer.exe"
-          Write-Host "Running installer..."
-          Start-Process -FilePath .\oneapi_installer.exe -ArgumentList '/s' -Wait
+          Write-Host "Downloading Intel oneAPI installer from GitHub release..."
+          Invoke-WebRequest -Uri "https://github.com/KartikayKaul/Matrix/releases/download/v1.0/intel-oneapi-base-toolkit-2025.2.1.46.exe" -OutFile "intel_oneapi_installer.exe"
+
+      # 3️⃣ Install oneAPI Base Toolkit silently
+      - name: Install Intel oneAPI Base Toolkit
+        shell: pwsh
+        run: |
+          Write-Host "Installing Intel oneAPI Base Toolkit (silent mode)..."
+          Start-Process -FilePath ".\intel_oneapi_installer.exe" -ArgumentList "-a", "--silent", "--eula", "accept", "-p=NEED_VS2022_INTEGRATION=0" -Wait
           Write-Host "Intel oneAPI installation complete."
 
-      # 3️⃣ Setup Intel oneAPI environment
-      - name: Setup Intel oneAPI Environment
-        shell: pwsh
+      # 4️⃣ Load Intel compiler environment
+      - name: Set up Intel compiler environment
+        shell: cmd
         run: |
-          $env:INTEL_ONEAPI_INSTALL_DIR = "C:\Program Files (x86)\Intel\oneAPI"
-          $env:PATH = "$env:INTEL_ONEAPI_INSTALL_DIR\compiler\latest\windows\bin\intel64;$env:PATH"
-          $env:INCLUDE = "$env:INTEL_ONEAPI_INSTALL_DIR\compiler\latest\windows\include;$env:INCLUDE"
-          $env:LIB = "$env:INTEL_ONEAPI_INSTALL_DIR\compiler\latest\windows\lib\intel64;$env:LIB"
-          Write-Host "Environment setup complete."
+          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+          icx /QV
 
-      # 4️⃣ Build main.cpp with icx
-      - name: Build main.cpp with icx
-        shell: pwsh
+      # 5️⃣ Build your C++ program
+      - name: Build main.cpp with Intel ICX
+        shell: cmd
         run: |
-          icx /EHsc /O3 /std:c++17 /Qiopenmp /arch:AVX2 main.cpp -o main_icx.exe
+          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+          icx /EHsc /O3 /std:c++17 /arch:AVX main.cpp -o main_icx.exe
 
-      # 5️⃣ Run the executable
+      # 6️⃣ Run the built executable
       - name: Run main_icx.exe
         shell: pwsh
         run: |
-          .\main_icx.exe 1024
+          Write-Host "Running Intel-compiled binary..."
+          ./main_icx.exe 1024

@@ -40,15 +40,24 @@ jobs:
           Start-Process -FilePath ".\intel-oneapi-base-toolkit-2025.2.1.46.exe" -ArgumentList "-a", "--silent", "--eula", "accept" -Wait
           Write-Host "Intel oneAPI installation complete."
 
-      # Build with icx (no OpenMP yet)
-      - name: Build main.cpp with Intel ICX
-        shell: pwsh
+      # Setup Intel compiler environment
+      - name: Setup Intel oneAPI environment
+        shell: cmd
         run: |
-          & "C:\\Program Files (x86)\\Intel\\oneAPI\\compiler\\latest\\windows\\bin\\icx.exe" /EHsc /O3 /std:c++17 /arch:AVX main.cpp -o main_icx.exe
+          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+          echo Intel oneAPI environment set up successfully.
+
+      # Build with icx
+      - name: Build main.cpp with Intel ICX
+        shell: cmd
+        run: |
+          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+          icx /EHsc /O3 /std:c++17 /arch:AVX main.cpp -o main_icx.exe
 
       # Run the executable
       - name: Run Intel-compiled binary
-        shell: pwsh
+        shell: cmd
         run: |
-          Write-Host "Running Intel-compiled binary..."
-          ./main_icx.exe 1024
+          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+          echo Running Intel-compiled binary...
+          main_icx.exe 1024

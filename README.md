@@ -8,6 +8,8 @@ Matrix library makes use of matrix class template so we can have matrix elements
 
 Be careful when dealing with `std::complex` matrices. Although I have tested the library with complex matrices and it works fine in many operations but in some operations there may arise some issues. You can report them in [issues section](https://github.com/DrakenWan/Matrix/issues). Moreover, I am actively taking into consideration adding safety measures to handle such cases and accomodate operations for complex numerical operations with the matrices.
 
+## Documentation & Usage\
+ You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation and usage example for example usage and reference.
 
 ## Parallelization and Optimization
 
@@ -84,8 +86,6 @@ The benchmarked times are averaged over 1000 iterations for double matrices of s
 
 There are several other function calls for matrix multiplication in the library. Each has its own specialty, negatives and positives. There is a non-parallelized version of `linear::para_strassen_multiply`
 
-## Documentation
- You can go to [Matrix wiki](https://github.com/DrakenWan/Matrix/wiki) to read documentation for example usage and reference.
 
 ## Updates
 - (commit update timestamp: 030520240406). I have made MAJOR CHANGES! So I have removed the memory alignment because the code for that was not portable. I have added BLIS Framework inspired code (source material added as reference in the code file) for general matrix multiply. This has sped up the code significantly. There is also a standalone gemm function that works on double square matrices. All the code is haphazardly put as of now and I will make changes to make it more compact if possible. And all the benchmarks for matrix multiplication will be updated soon. As of now I am just committing the changes.

@@ -65,7 +65,7 @@ int main(int arg, char *argv[]) {
         else if (i % 30 == 0) std::cout << "\r[====------]";
         else if (i % 20 == 0) std::cout << "\r[===-------]";
         else if (i % 10 == 0) std::cout << "\r[==--------]";
-        else if (i % 1 == 0)  std::cout << "\r[=---------]";
+        else if (i % 5 == 0)  std::cout << "\r[=---------]";
     }
 
     cout<<"\n\n====Benchmark Results====\n";

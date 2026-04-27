@@ -54,6 +54,7 @@ I am thinking of adding [winograd optimization](https://en.wikipedia.org/wiki/Ma
 ### Benchmarked results 
 Note that the standard `Matrix Multiplication` implementation invokes OpenMP parallelization for matrices of sizes larger than 100. These time values are averaged over 1000 iterations and are run with `-O3` level optimization in with gcc compiler. The standard followed is from C++17. For `Fastor::matmul` the Tensors could only be defined upto 512. All the matrices are of dimensions in power of 2.
 
+
 Different `matmul` implementations in the columns of the benchmark table are described in the following list:-
 * `linear::matmul` is the default matrix multiplication in my library which uses [`BLIS`]((https://www.cs.utexas.edu/users/flame/pubs/blis1_toms_rev3.pdf)) inspired GEMM.
 * `Fastor::matmul` is the matrix multiplication implementation from [Fastor](https://github.com/romeric/Fastor) - a fast tensor algenra library
